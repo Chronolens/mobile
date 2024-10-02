@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:grpc/grpc.dart';
+import 'package:maybe_just_nothing/maybe_just_nothing.dart';
 import '../services/login_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -41,11 +43,26 @@ class _LoginPageState extends State<LoginPage> {
     void login(String username, String password) async {
       final response = await loginServiceClient.login(username, password);
       print(response);
-      if (response == null) {
-        print("Not OK");
-        showErrorDialog(context, "bruh");
+
+      if (response is Just<GrpcError?>) {
+        var error = response.value;
+        if (error == null) {
+          // NOTE: Other error
+          showErrorDialog(context, "unkown error");
+        } else {
+          // NOTE: GRPC error
+          switch (error.code) {
+            case 5:
+              showErrorDialog(context, error.message ?? "");
+            case 14:
+              showErrorDialog(context, error.message ?? "");
+            case _:
+              showErrorDialog(context, error.message ?? "");
+          }
+        }
       } else {
         print("OK");
+        Navigator.of(context).pushReplacementNamed("/");
       }
     }
 
@@ -53,11 +70,10 @@ class _LoginPageState extends State<LoginPage> {
           onChanged: (value) => setState(() => password = value),
           decoration: InputDecoration(
             labelText: 'Password',
-            //errorText: 'Password is wrong',
             suffixIcon: IconButton(
               icon: isPasswordVisible
-                  ? const Icon(Icons.visibility_off)
-                  : const Icon(Icons.visibility),
+                  ? const Icon(Icons.visibility)
+                  : const Icon(Icons.visibility_off),
               onPressed: () =>
                   setState(() => isPasswordVisible = !isPasswordVisible),
             ),
@@ -75,18 +91,20 @@ class _LoginPageState extends State<LoginPage> {
         );
 
     Widget submitCredentials() => TextButton(
-        onPressed: () => {login(username, password),print("")}, child: const Text("Log In"),);
+          onPressed: () => login(username, password),
+          child: const Text("Log In"),
+        );
 
     return Scaffold(
         body: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(children: [
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             buildUsername(),
             buildPassword(),
             submitCredentials()
           ]),
         ),
-        floatingActionButton:
-            FloatingActionButton(onPressed: () => {}));
+        floatingActionButton: FloatingActionButton(
+            onPressed: () => Navigator.of(context).pushReplacementNamed("/")));
   }
 }
