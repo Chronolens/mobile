@@ -4,6 +4,8 @@ import 'package:maybe_just_nothing/maybe_just_nothing.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'dart:io';
+
 import 'package:mobile/model/login_request.dart';
 import 'package:mobile/model/login_response.dart';
 import 'package:mobile/model/media.dart';
@@ -25,14 +27,44 @@ class APIServiceClient {
     return null;
   }
 
-  Future<List<MediaFile>?> getMediaFile() async {
-    var client = http.Client();
-    var uri = Uri.parse('https://10.0.0.10:8080/image_upload');
-    var response = await client.get(uri);
+  void upload(String path /*File file , Map<String, String> fields */) async {
+
+    var uri = Uri.parse('http://10.0.0.10:8080/image/upload');
+    var request = http.MultipartRequest('POST', uri)
+      ..files.add(await http.MultipartFile.fromPath('image', path));
+
+    var response = await request.send();
+    if (response.statusCode == 200) print('Uploaded!');
+    else print("bruh");
+
+    // Add file to the request
+    // var fileStream = http.ByteStream(file.openRead());
+    // var length = await file.length();
+    // var multipartFile = http.MultipartFile('file', fileStream, length, filename: basename(file.path));
+
+    // // Add the multipart file to the request
+    // request.files.add(multipartFile);
+
+    // try {
+    //   // Send the request to the server
+    //   var response = await request.send();
+
+    //   // Get response and check status code
+    //   if (response.statusCode == 200) {
+    //     var responseData = await http.Response.fromStream(response);
+    //     print('File uploaded successfully: ${responseData.body}');
+    //   } else {
+    //     print('File upload failed: ${response.statusCode}');
+    //   }
+    // } catch (e) {
+    //   print('Error uploading file: $e');
+    // }
+
+    /*var response = await client.get(uri);
     if (response.statusCode == 200) {
       return mediaFileFromJson(const Utf8Decoder().convert(response.bodyBytes));
     }
-    return null;
+    return null;*/
   }
 
 // late ClientChannel channel;
