@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/login_service.dart';
+import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
@@ -9,7 +9,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final loginServiceClient = LoginServiceClient();
+  final apiServiceClient = APIServiceClient();
 
   String username = "";
   String password = "";
@@ -39,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     void login(String username, String password) async {
-      final response = await loginServiceClient.login(username, password);
+      final response = await apiServiceClient.login(username, password);
       print(response);
       if (response == null) {
         print("Not OK");
