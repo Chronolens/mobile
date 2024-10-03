@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:grpc/grpc.dart';
 import 'package:mobile/grpc_gen/chronolens.pb.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:maybe_just_nothing/maybe_just_nothing.dart';
 import '../grpc_gen/chronolens.pbgrpc.dart'; // Import your generated gRPC code
 
 class APIServiceClient {
@@ -12,7 +14,7 @@ class APIServiceClient {
     // Initialize gRPC channel
     channel = ClientChannel(
       '10.0.0.10', // The IP or hostname of the gRPC server
-      port: 50051, // The port on which the gRPC server is running
+      port: 8080, // The port on which the gRPC server is running
       options: const ChannelOptions(
         credentials: ChannelCredentials
             .insecure(), // Use secure credentials in production
@@ -24,24 +26,29 @@ class APIServiceClient {
   }
 
   // Function to get photo by ID
-  Future<LoginResponse?> login(String username, String password) async {
+  Future<Maybe<GrpcError?>> login(String username, String password) async {
     try {
-      // Create a GetPhotoRequest with the provided id
       final request = LoginRequest()
         ..username = username
         ..password = password;
 
-      // Call the gRPC method and get the response
       final response = await stub.login(request);
-      
-      // Return the photo URL from the response
-      return response;
+
+      final storage = new FlutterSecureStorage();
+      await storage.write(key: "jwtToken", value: response.token);
+
+      // String? value = await storage.read(key: "jwtToken");
+      // print(value);
+
+      return const Nothing();
+    } on GrpcError catch (e) {
+      print('GrpcError: $e');
+      return Just(e);
     } catch (e) {
-      print('Error logging in: $e');
-      return null;
+      print('Random Error: $e');
+      return const Just(null);
     }
   }
-
   // Function to upload an image
   Future<UploadImageResponse?> uploadImage(String filetype, ByteBuffer data) async {
     try {
