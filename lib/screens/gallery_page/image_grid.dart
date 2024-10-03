@@ -28,8 +28,9 @@ class _ImageGridState extends State<ImageGrid> {
 
   Future<void> _loadAssets(int pageKey) async {
     try {
+      
       final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
-        type: RequestType.image,
+        type: RequestType.fromTypes([RequestType.image,RequestType.video])
       );
 
       if (paths.isNotEmpty) {
