@@ -14,8 +14,8 @@ class PreviewContainer extends StatelessWidget {
     return thumbnail != null
         ? GestureDetector(
             onTap: () {
-              // Handle tap on thumbnail (e.g., full screen preview)
-              print('Asset tapped: ${asset.title}');
+              print('File tapped: ${asset.title}');
+              // #TODO: Implement the logic to upload a photo
             },
             child: Container(
               decoration: BoxDecoration(
