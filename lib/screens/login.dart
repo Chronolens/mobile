@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:grpc/grpc.dart';
 import 'package:maybe_just_nothing/maybe_just_nothing.dart';
 import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
-  LoginPage({super.key});
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final loginServiceClient = APIServiceClient();
+  final apiServiceClient = APIServiceClient();
 
   String username = "";
   String password = "";
@@ -41,28 +40,14 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     void login(String username, String password) async {
-      final response = await loginServiceClient.login(username, password);
+      final response = await apiServiceClient.login(username, password);
       print(response);
 
-      if (response is Just<GrpcError?>) {
-        var error = response.value;
-        if (error == null) {
-          // NOTE: Other error
-          showErrorDialog(context, "unkown error");
-        } else {
-          // NOTE: GRPC error
-          switch (error.code) {
-            case 5:
-              showErrorDialog(context, error.message ?? "");
-            case 14:
-              showErrorDialog(context, error.message ?? "");
-            case _:
-              showErrorDialog(context, error.message ?? "");
-          }
-        }
-      } else {
+      if (response != null){
         print("OK");
         Navigator.of(context).pushReplacementNamed("/");
+      } else{
+        showErrorDialog(context, "unkown error");
       }
     }
 
@@ -106,5 +91,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         floatingActionButton: FloatingActionButton(
             onPressed: () => Navigator.of(context).pushReplacementNamed("/")));
+    // floatingActionButton: FloatingActionButton(
+         //    onPressed: () => Navigator.of(context).pushReplacementNamed("/")));
   }
 }
