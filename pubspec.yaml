@@ -18,6 +18,7 @@ dependencies:
   maybe_just_nothing: ^0.5.3
   flutter_secure_storage: ^9.2.2
   shared_preferences: ^2.3.2
+  crypto: ^3.0.5
 
   cupertino_icons: ^1.0.8
   permission_handler: ^11.3.1
