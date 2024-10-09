@@ -1,5 +1,6 @@
+import 'package:mobile/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
-import 'package:maybe_just_nothing/maybe_just_nothing.dart';
 import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -14,8 +15,24 @@ class _LoginPageState extends State<LoginPage> {
 
   String username = "";
   String password = "";
+  String serverAddress = "";
   bool isPasswordVisible = false;
   bool wrongCredentials = false;
+  bool isLoadingServerAddress = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadServerAddress();
+  }
+
+  Future<void> _loadServerAddress() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      serverAddress = prefs.getString(BASE_URL) ?? "";
+      isLoadingServerAddress = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,58 +57,76 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     void login(String username, String password) async {
-      final response = await apiServiceClient.login(username, password);
-      print(response);
+      final response =
+          await apiServiceClient.login(username, password, serverAddress);
 
-      if (response != null){
-        print("OK");
-        Navigator.of(context).pushReplacementNamed("/");
-      } else{
-        showErrorDialog(context, "unkown error");
+      switch (response) {
+        case 200:
+          Navigator.of(context).pushReplacementNamed("/");
+        case 401:
+          showErrorDialog(context, LOGIN_ERROR_401);
+        case null:
+          showErrorDialog(context, LOGIN_ERROR_UNKNOWN);
+        default:
+          showErrorDialog(context, LOGIN_ERROR_UNKNOWN);
       }
     }
 
     Widget buildPassword() => TextField(
-      onChanged: (value) => setState(() => password = value),
-      decoration: InputDecoration(
-        labelText: 'Password',
-        suffixIcon: IconButton(
-          icon: isPasswordVisible
-              ? const Icon(Icons.visibility)
-              : const Icon(Icons.visibility_off),
-          onPressed: () =>
-              setState(() => isPasswordVisible = !isPasswordVisible),
-        ),
-        border: OutlineInputBorder(),
-      ),
-      obscureText: !isPasswordVisible,
-    );
+          onChanged: (value) => setState(() => password = value),
+          decoration: InputDecoration(
+            labelText: 'Password',
+            suffixIcon: IconButton(
+              icon: isPasswordVisible
+                  ? const Icon(Icons.visibility)
+                  : const Icon(Icons.visibility_off),
+              onPressed: () =>
+                  setState(() => isPasswordVisible = !isPasswordVisible),
+            ),
+            border: const OutlineInputBorder(),
+          ),
+          obscureText: !isPasswordVisible,
+        );
 
     Widget buildUsername() => TextField(
-      onChanged: (value) => setState(() => username = value),
-      decoration: const InputDecoration(
-        labelText: 'Username',
-        border: OutlineInputBorder(),
-      ),
-    );
+          onChanged: (value) => setState(() => username = value),
+          decoration: const InputDecoration(
+            labelText: 'Username',
+            border: OutlineInputBorder(),
+          ),
+        );
 
-    Widget submitCredentials() => TextButton(
-      onPressed: () => login(username, password),
-      child: const Text("Log In"),
-    );
+    Widget buildServer() {
+      if (isLoadingServerAddress) {
+        return const CircularProgressIndicator(); // TODO: Do a full loading page instead??
+      }
+      return TextFormField(
+        //key: ValueKey(serverAddress),
+        initialValue: serverAddress,
+        onChanged: (value) => setState(() => serverAddress = value),
+        decoration: const InputDecoration(
+          labelText: 'Server',
+          border: OutlineInputBorder(),
+        ),
+      );
+    }
+
+    Widget loginButton() => TextButton(
+          onPressed: () => login(username, password),
+          child: const Text("Log In"),
+        );
 
     return Scaffold(
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            buildServer(),
             buildUsername(),
             buildPassword(),
-            submitCredentials()
+            loginButton()
           ]),
         ),
         floatingActionButton: FloatingActionButton(
             onPressed: () => Navigator.of(context).pushReplacementNamed("/")));
-    // floatingActionButton: FloatingActionButton(
-         //    onPressed: () => Navigator.of(context).pushReplacementNamed("/")));
   }
 }
