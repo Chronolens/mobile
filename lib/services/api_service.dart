@@ -33,7 +33,7 @@ class APIServiceClient {
     }
   }
 
-  void upload(String path /*File file , Map<String, String> fields */) async {
+  void upload(String path) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String baseUrl = prefs.getString(BASE_URL) ?? "";
 
@@ -45,7 +45,7 @@ class APIServiceClient {
     if (response.statusCode == 200)
       print('Uploaded!');
     else
-      print("bruh");
+      print(response);
   }
 
 }
