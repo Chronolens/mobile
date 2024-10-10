@@ -12,7 +12,7 @@ class ImageGrid extends StatefulWidget {
 }
 
 class _ImageGridState extends State<ImageGrid> {
-  static const _pageSize = 100;
+  static const _pageSize = 20;
   final PagingController<int, AssetEntity> _pagingController =
       PagingController(firstPageKey: 0);
 
