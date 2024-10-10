@@ -1,5 +1,7 @@
+import 'package:mime/mime.dart';
 import 'dart:io';
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -15,8 +17,8 @@ class APIServiceClient {
     var payload = LoginRequest(username, password).toJson();
     var body = json.encode(payload);
     Map<String, String> headers = {
-      'Content-type': 'application/json',
-      'Accept': 'application/json',
+      HttpHeaders.contentTypeHeader: 'application/json',
+      HttpHeaders.acceptHeader: 'application/json',
     };
 
     try {
@@ -37,61 +39,78 @@ class APIServiceClient {
     }
   }
 
-  void upload(String path) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String baseUrl = prefs.getString(BASE_URL) ?? "";
-    var uri = Uri.parse('$baseUrl/image/upload');
-    print('$baseUrl/image/upload');
+  // void upload(String path) async {
+  //   final SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   String baseUrl = prefs.getString(BASE_URL) ?? "";
+  //   var uri = Uri.parse('$baseUrl/image/upload');
+  //   print('$baseUrl/image/upload');
 
-    final fileStream = File(path).openRead();
-    final checksum = (await sha256.bind(fileStream).first).toString();
+  //   final fileStream = File(path).openRead();
+  //   final checksum = (await sha256.bind(fileStream).first).toString();
 
-    final storage = FlutterSecureStorage();
-    final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+  //   final storage = FlutterSecureStorage();
+  //   final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+  //     final mimeType = lookupMimeType(path) ?? "application/octet-stream";
 
-    var request = http.MultipartRequest('POST', uri)
-      ..headers[HttpHeaders.authorizationHeader] = "Bearer $jwtToken"
-      ..files.add(
-          await http.MultipartFile.fromPath('image', path, filename: checksum));
+  //   var request = http.MultipartRequest('POST', uri)
+  //     ..headers.addAll({
+  //       HttpHeaders.cacheControlHeader: 'no-cache',
+  //       HttpHeaders.authorizationHeader: "Bearer $jwtToken",
+  //       HttpHeaders.contentTypeHeader: mimeType,
+  //       'Content-Digest': "sha-256=:$checksum:",
+  //       'Expect': '100-continue'
+  //     })
+  //     ..files.add(
+  //         await http.MultipartFile.fromPath('image', path, filename: checksum));
 
-    var response = await request.send();
-    if (response.statusCode == 200)
-      print('Uploaded!');
-    else
-      print(response);
-  }
+  //   var response = await request.send();
+  //   if (response.statusCode == 200)
+  //     print('Uploaded!');
+  //   else
+  //     print(response);
+  // }
 
   Future<void> uploadFileStream(String filePath) async {
-    final file = new File(filePath);
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String baseUrl = prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/image/upload');
-    final fileStream = File(filePath).openRead();
-    final checksum = (await sha256.bind(fileStream).first).bytes;
-
-
     final storage = FlutterSecureStorage();
     final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
 
-    final streamedRequest = new http.StreamedRequest('POST', uri)
+    final file = File(filePath);
+    final fileStream = file.openRead();
+    final checksum = base64.encode((await sha256.bind(fileStream).first).bytes);
+    final mimeType = lookupMimeType(filePath) ?? "application/octet-stream";
+
+    print("MimeType: $mimeType");
+    print("CheckSum: $checksum");
+    print("FilePath: $filePath");
+
+    final streamedRequest = http.StreamedRequest('POST', uri)
       ..headers.addAll({
-        'Cache-Control': 'no-cache',
-        HttpHeaders.authorizationHeader : "Bearer $jwtToken",
-        //'Content-Type': file.
+        HttpHeaders.cacheControlHeader: 'no-cache',
+        HttpHeaders.authorizationHeader: "Bearer $jwtToken",
+        HttpHeaders.contentTypeHeader: mimeType,
+        'Content-Digest': "sha-256=:$checksum:",
+        'Expect': '100-continue'
       });
-    streamedRequest.sink.add(checksum);
-    streamedRequest.contentLength = await file.length() + checksum.length;
-    print(checksum);
-    print(streamedRequest.contentLength);
+
+    streamedRequest.contentLength = await file.length();
     file.openRead().listen((chunk) {
-      print(chunk.length);
+      print("chunk: ${chunk.length}");
       streamedRequest.sink.add(chunk);
     }, onDone: () {
       streamedRequest.sink.close();
     });
+    try {
+      var response = await streamedRequest.send();
 
-    var response = await streamedRequest.send();
-    
-    print('Response: $response');
+      print(
+          'Response: ${response.statusCode} ${response.reasonPhrase} ${await response.stream.bytesToString()}');
+    } on http.ClientException catch (e) {
+      print("Client Exception: ${e.message}");
+    } catch (e) {
+      print("Other exception");
+    }
   }
 }
