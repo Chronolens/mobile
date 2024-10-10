@@ -28,7 +28,6 @@ class PreviewContainer extends StatelessWidget {
               if (filePath != null) {
                 print('File tapped: ${asset.title}');
                 APIServiceClient().uploadFileStream(filePath);
-                // APIServiceClient().upload(filePath);
               } else {
                 print('Error: Unable to retrieve file path');
               }
