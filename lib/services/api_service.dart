@@ -92,6 +92,6 @@ class APIServiceClient {
 
     var response = await streamedRequest.send();
     
-    print('Response: ${response}');
+    print('Response: $response');
   }
 }
