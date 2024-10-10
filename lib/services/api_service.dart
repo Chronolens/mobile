@@ -1,3 +1,4 @@
+import 'package:exif/exif.dart';
 import 'package:mime/mime.dart';
 import 'dart:io';
 import 'dart:async';
@@ -5,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile/utils/constants.dart';
+import 'package:mobile/utils/time.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile/model/login_request.dart';
@@ -85,18 +87,21 @@ class APIServiceClient {
     print("CheckSum: $checksum");
     print("FilePath: $filePath");
 
+    final int fileTimeStamp = await getFileStamp(file);
+
     final streamedRequest = http.StreamedRequest('POST', uri)
       ..headers.addAll({
         HttpHeaders.cacheControlHeader: 'no-cache',
         HttpHeaders.authorizationHeader: "Bearer $jwtToken",
         HttpHeaders.contentTypeHeader: mimeType,
+        "Timestamp" : fileTimeStamp.toString(),
         'Content-Digest': "sha-256=:$checksum:",
         'Expect': '100-continue'
       });
 
     streamedRequest.contentLength = await file.length();
     file.openRead().listen((chunk) {
-      print("chunk: ${chunk.length}");
+      //print("chunk: ${chunk.length}");
       streamedRequest.sink.add(chunk);
     }, onDone: () {
       streamedRequest.sink.close();
