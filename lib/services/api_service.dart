@@ -112,4 +112,14 @@ class APIServiceClient {
       print("Other exception");
     }
   }
+
+  Future<void> upload(String path /*File file, Map<String, String> fields */) async {
+    await Future.delayed(Duration(seconds: 2));  // Simulate a delay for upload
+
+    // Perform actual upload logic here, e.g., using http.post/multipart, etc.
+    print('Uploading file at: $path');
+
+    return;  // Explicitly return a Future<void>
+  }
+
 }

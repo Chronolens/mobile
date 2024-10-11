@@ -24,7 +24,7 @@ class _PreviewContainerState extends State<PreviewContainer> {
 
   Future<void> _uploadFile(String filePath) async {
     print('File tapped: ${widget.asset.title}');
-    await APIServiceClient().upload(filePath);
+    await APIServiceClient().uploadFileStream(filePath);
     
     setState(() {
       _isUploaded = true;
