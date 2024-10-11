@@ -71,8 +71,8 @@ class _ImageGridState extends State<ImageGrid> {
       pagingController: _pagingController,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
-        crossAxisSpacing: 4.0,
-        mainAxisSpacing: 4.0,
+        crossAxisSpacing: 2.0,
+        mainAxisSpacing: 2.0,
       ),
       builderDelegate: PagedChildBuilderDelegate<AssetEntity>(
         itemBuilder: (context, asset, index) {
