@@ -22,11 +22,13 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, 
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
@@ -55,7 +57,7 @@ class _HomePageState extends State<HomePage> {
             label: 'Settings',
           ),
         ],
-        selectedItemColor: Colors.deepPurpleAccent.shade700,
+        selectedItemColor: Colors.purple,
         unselectedItemColor: Colors.grey,
       ),
     );

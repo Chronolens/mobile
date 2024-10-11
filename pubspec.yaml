@@ -1,5 +1,5 @@
 name: mobile
-description: "A new Flutter project."
+description: "A self-hosted cloud gallery alternative."
 
 publish_to: 'none' 
 
@@ -25,6 +25,7 @@ dependencies:
   photo_manager: ^3.5.0
   device_info_plus: ^10.1.2
   infinite_scroll_pagination: ^4.0.0
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
