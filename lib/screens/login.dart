@@ -127,6 +127,7 @@ class _LoginPageState extends State<LoginPage> {
           ]),
         ),
         floatingActionButton: FloatingActionButton(
-            onPressed: () => Navigator.of(context).pushReplacementNamed("/")));
+            onPressed: () =>
+                {Navigator.of(context).pushReplacementNamed("/")}));
   }
 }

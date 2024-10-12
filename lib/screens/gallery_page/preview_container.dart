@@ -1,20 +1,15 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+import 'package:mobile/model/local_media_asset.dart';
+import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/services/api_service.dart';
 
 class PreviewContainer extends StatelessWidget {
-  final AssetEntity asset;
+  final MediaAsset asset;
   final Uint8List? thumbnail;
 
   const PreviewContainer({Key? key, required this.asset, this.thumbnail})
       : super(key: key);
-
-  Future<String?> _getFilePath(AssetEntity asset) async {
-    final file = await asset.file;
-    return file?.path;
-  }
-
 
   // #TODO:
 
@@ -23,13 +18,11 @@ class PreviewContainer extends StatelessWidget {
     return thumbnail != null
         ? GestureDetector(
             onTap: () async {
-              var filePath = await _getFilePath(asset);
-              
-              if (filePath != null) {
-                print('File tapped: ${asset.title}');
-                APIServiceClient().uploadFileStream(filePath);
+              if (asset is LocalMedia) {
+                print('File tapped: ${(asset as LocalMedia).path}');
+                APIServiceClient().uploadFileStream((asset as LocalMedia).path);
               } else {
-                print('Error: Unable to retrieve file path');
+                print("This is remote: ${asset.checksum}");
               }
             },
             child: Container(
@@ -43,7 +36,7 @@ class PreviewContainer extends StatelessWidget {
             ),
           )
         : Container(
-            color: Colors.grey, 
+            color: Colors.grey,
           );
   }
 }
