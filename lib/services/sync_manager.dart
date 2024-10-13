@@ -26,9 +26,9 @@ class SyncManager {
       Map<String, MediaInfo> mediaInfo = HashMap();
 
       for (var pair in paths.take(64)) {
+        List<String> s =
+            (pair as List<dynamic>).map((e) => e.toString()).toList();
 
-        List<String> s = (pair as List<dynamic>).map((e) => e.toString()).toList();
-        
         File file = File(s[0]);
         final fileStream = file.openRead();
         final checksum =
@@ -71,8 +71,9 @@ class SyncManager {
       }
     }
     mediaAssets.addAll(remoteMediaInfo.values.toList()
-      ..removeWhere((item) => localAndRemoteHashes.contains(item.checksum))
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp)));
+      ..removeWhere((item) => localAndRemoteHashes.contains(item.checksum)));
+
+    mediaAssets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     int i = 0;
     for (var a in mediaAssets) {

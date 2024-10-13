@@ -18,7 +18,7 @@ class PreviewContainer extends StatelessWidget {
     return thumbnail != null
         ? GestureDetector(
             onTap: () async {
-              if (asset is LocalMedia) {
+              if (asset is LocalMedia && ((asset as LocalMedia).remoteId == null)) {
                 print('File tapped: ${(asset as LocalMedia).path}');
                 APIServiceClient().uploadFileStream((asset as LocalMedia).path);
               } else {
