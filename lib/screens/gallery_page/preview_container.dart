@@ -25,16 +25,7 @@ class PreviewContainer extends StatelessWidget {
                 print("This is remote: ${asset.checksum}");
               }
             },
-            child: Container(
-              child: thumbnail,
-              // decoration: BoxDecoration(
-              //   image: DecorationImage(
-              //     image: thumbnail,
-              //     fit: BoxFit.cover,
-              //   ),
-              //   borderRadius: BorderRadius.circular(8.0),
-              // ),
-            ),
+            child: thumbnail,
           )
         : Container(
             color: Colors.grey,
