@@ -62,7 +62,7 @@ class _LoginPageState extends State<LoginPage> {
 
       switch (response) {
         case 200:
-          Navigator.of(context).pushReplacementNamed("/");
+          Navigator.of(context).pushReplacementNamed("/home");
         case 401:
           showErrorDialog(context, LOGIN_ERROR_401);
         case null:
@@ -128,6 +128,6 @@ class _LoginPageState extends State<LoginPage> {
         ),
         floatingActionButton: FloatingActionButton(
             onPressed: () =>
-                {Navigator.of(context).pushReplacementNamed("/")}));
+                {Navigator.of(context).pushReplacementNamed("/home")}));
   }
 }
