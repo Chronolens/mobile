@@ -6,6 +6,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 
 
+
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.mobile/images"
 
@@ -17,9 +18,9 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger!!, CHANNEL).setMethodCallHandler { 
             call, result ->
             if (call.method == "getAllImagePathsNative") {
-                // Retrieve image paths
+                // Retrieve image paths and ids
                 val imagePaths = getAllImagePathsNative()
-                // Return the paths to Flutter
+                // Return the paths and ids to Flutter
                 result.success(imagePaths)
             } else {
                 result.notImplemented()
@@ -27,13 +28,16 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    // Function to get all image paths
-    private fun getAllImagePathsNative(): List<String> {
-        val imagePaths = mutableListOf<String>()
-        // Specify which column to retrieve (the file path in this case)
-        val projection = arrayOf(MediaStore.Images.Media.DATA)
+    // Function to get all image paths and MediaStore IDs
+    private fun getAllImagePathsNative(): List<List<String>> {
+        val imagePaths = mutableListOf<List<String>>()
+        // Specify the columns to retrieve: _ID (MediaStore ID) and DATA (file path)
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,    // MediaStore ID
+            MediaStore.Images.Media.DATA    // File path
+        )
 
-        // Query MediaStore to get image file paths
+        // Query MediaStore to get image file paths and IDs
         val cursor: Cursor? = contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             projection,
@@ -42,12 +46,17 @@ class MainActivity : FlutterActivity() {
             null
         )
 
-        // Safely use the cursor and retrieve image paths
+        // Safely use the cursor and retrieve image paths and IDs
         cursor?.use {
-            val columnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+            val idColumnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val dataColumnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+            
             while (it.moveToNext()) {
-                val imagePath = it.getString(columnIndex)
-                imagePaths.add(imagePath)
+                val imageId = it.getString(idColumnIndex)        // Get the MediaStore ID
+                val imagePath = it.getString(dataColumnIndex)    // Get the file path
+
+                // Add both MediaStore ID and image path to the list
+                imagePaths.add(listOf(imagePath,imageId))
             }
         }
 

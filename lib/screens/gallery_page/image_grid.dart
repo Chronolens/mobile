@@ -15,11 +15,11 @@ class ImageGrid extends StatefulWidget {
 }
 
 class _ImageGridState extends State<ImageGrid> {
-  static const _pageSize = 5;
+  static const _pageSize = 40;
   final PagingController<int, MediaAsset> _pagingController =
       PagingController(firstPageKey: 0);
 
-  final Map<String, Uint8List?> _thumbnailCache = {};
+  final Map<String, Widget?> _thumbnailCache = {};
   List<MediaAsset> paths = [];
   bool _isPathsLoaded = false; // Add this flag
 
@@ -63,14 +63,16 @@ class _ImageGridState extends State<ImageGrid> {
     }
   }
 
-  Future<Uint8List?> _getThumbnail(MediaAsset asset) async {
+  Future<Widget?> _getThumbnail(MediaAsset asset) async {
     if (_thumbnailCache.containsKey(asset.checksum)) {
       return _thumbnailCache[asset.checksum];
     }
 
-    final Uint8List? thumbnail = await asset.getPreview();
+    final Widget? thumbnail = await asset.getPreview();
     _thumbnailCache[asset.checksum] = thumbnail;
     return thumbnail;
+
+
   }
 
   @override
@@ -91,7 +93,7 @@ class _ImageGridState extends State<ImageGrid> {
       ),
       builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
         itemBuilder: (context, asset, index) {
-          return FutureBuilder<Uint8List?>(
+          return FutureBuilder<Widget?>(
             future: _getThumbnail(asset),
             builder: (context, snapshot) {
               if (snapshot.hasData) {

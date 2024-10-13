@@ -61,6 +61,6 @@ class _HomePageState extends State<HomePage> {
           unselectedItemColor: Colors.grey,
         ),
         floatingActionButton: FloatingActionButton(
-            onPressed: () => {SyncManager().syncResolver()}));
+            onPressed: () => {}));
   }
 }

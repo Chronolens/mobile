@@ -6,7 +6,7 @@ import 'package:mobile/services/api_service.dart';
 
 class PreviewContainer extends StatelessWidget {
   final MediaAsset asset;
-  final Uint8List? thumbnail;
+  final Widget? thumbnail;
 
   const PreviewContainer({Key? key, required this.asset, this.thumbnail})
       : super(key: key);
@@ -26,13 +26,14 @@ class PreviewContainer extends StatelessWidget {
               }
             },
             child: Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: MemoryImage(thumbnail!),
-                  fit: BoxFit.cover,
-                ),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
+              child: thumbnail,
+              // decoration: BoxDecoration(
+              //   image: DecorationImage(
+              //     image: thumbnail,
+              //     fit: BoxFit.cover,
+              //   ),
+              //   borderRadius: BorderRadius.circular(8.0),
+              // ),
             ),
           )
         : Container(

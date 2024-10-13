@@ -20,6 +20,7 @@ dependencies:
   shared_preferences: ^2.3.2
   crypto: ^3.0.5
   exif: ^3.3.0
+  image: ^4.2.0
 
   cupertino_icons: ^1.0.8
   permission_handler: ^11.3.1

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/services/api_service.dart';
@@ -6,6 +7,7 @@ import 'package:photo_manager/photo_manager.dart';
 
 class RemoteMedia extends MediaAsset {
   String id;
+
 
   RemoteMedia(this.id, super.checksum, super.timestamp);
 
@@ -16,17 +18,8 @@ class RemoteMedia extends MediaAsset {
   }
 
   @override
-  Future<Uint8List?> getPreview() async {
+  Future<Widget?> getPreview() async {
     String imgUrl = await APIServiceClient().getPreview(this.id);
-    Uri uri = Uri.parse(imgUrl);
-    try {
-      var response = await http.get(uri);
-      Uint8List data = response.bodyBytes;
-      final AssetEntity? assetEntity = await PhotoManager.editor.saveImage(data, filename: this.id);
-      return await assetEntity?.thumbnailData;
-    } catch (e) {
-      return null;
-    }
+    return Image.network(imgUrl);
   }
-
 }

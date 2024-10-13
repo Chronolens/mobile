@@ -9,6 +9,7 @@ import 'package:mobile/model/media_info.dart';
 import 'package:mobile/model/remote_media_asset.dart';
 import 'package:mobile/services/api_service.dart';
 import 'package:mobile/utils/time.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 class SyncManager {
   //Native Module
@@ -24,12 +25,15 @@ class SyncManager {
 
       Map<String, MediaInfo> mediaInfo = HashMap();
 
-      for (String s in paths.cast<String>().take(20)) {
-        File file = File(s);
+      for (var pair in paths.take(64)) {
+
+        List<String> s = (pair as List<dynamic>).map((e) => e.toString()).toList();
+        
+        File file = File(s[0]);
         final fileStream = file.openRead();
         final checksum =
             base64.encode((await sha256.bind(fileStream).first).bytes);
-        mediaInfo[checksum] = MediaInfo(s, await getFileStamp(file));
+        mediaInfo[checksum] = MediaInfo(s[0], await getFileStamp(file), s[1]);
       }
 
       final end = DateTime.now().millisecondsSinceEpoch;
@@ -58,12 +62,12 @@ class SyncManager {
       var remoteMedia = remoteMediaInfo[entry.key];
 
       if (remoteMedia != null) {
-        mediaAssets.add(LocalMedia(remoteMedia.id, entry.value.path, entry.key,
-            entry.value.timestamp));
+        mediaAssets.add(LocalMedia(remoteMedia.id, entry.value.path,
+            entry.value.id, entry.key, entry.value.timestamp));
         localAndRemoteHashes.add(entry.key);
       } else {
-        mediaAssets.add(LocalMedia(
-            null, entry.value.path, entry.key, entry.value.timestamp));
+        mediaAssets.add(LocalMedia(null, entry.value.path, entry.value.id,
+            entry.key, entry.value.timestamp));
       }
     }
     mediaAssets.addAll(remoteMediaInfo.values.toList()
@@ -74,9 +78,6 @@ class SyncManager {
     for (var a in mediaAssets) {
       print(
           "Media:${a.checksum} | ${a.timestamp} | ${a is LocalMedia ? "true" : "false"}");
-      if (i == 10) {
-        break;
-      }
     }
     final end = DateTime.now().millisecondsSinceEpoch;
     print("It ALL took ${(end - start)}");
