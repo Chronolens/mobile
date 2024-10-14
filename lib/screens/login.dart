@@ -28,8 +28,9 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _loadServerAddress() async {
     final SharedPreferencesAsync prefs = SharedPreferencesAsync();
-    setState(() async {
-      serverAddress = await prefs.getString(BASE_URL) ?? "";
+    final serverAddressPrefs = await prefs.getString(BASE_URL) ?? "";
+    setState(() {
+      serverAddress = serverAddressPrefs;
       isLoadingServerAddress = false;
     });
   }

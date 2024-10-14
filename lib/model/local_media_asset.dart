@@ -11,32 +11,36 @@ class LocalMedia extends MediaAsset {
       this.remoteId, this.path, this.id, super.checksum, super.timestamp);
 
   @override
-  Future<Widget?> getPreview() async {
+  Future<Widget> getPreview() async {
     final preview = await AssetEntity.fromId(id);
     final thumbnail = await preview?.thumbnailData;
 
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: Image.memory(thumbnail!).image,
-              fit: BoxFit.cover,
-            ),
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-        ),
-        if (remoteId != null) // Only add the icon if remoteId is not null
-          Positioned(
-            top: 8.0,
-            right: 8.0,
-            child: Icon(
-              Icons.cloud,
-              color: Colors.black,
-              size: 24.0,
-            ),
-          ),
-      ],
-    );
+    return thumbnail != null
+        ? Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: Image.memory(thumbnail!).image,
+                    fit: BoxFit.cover,
+                  ),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+              if (remoteId != null) // Only add the icon if remoteId is not null
+                Positioned(
+                  top: 8.0,
+                  right: 8.0,
+                  child: Icon(
+                    Icons.cloud,
+                    color: Colors.black,
+                    size: 24.0,
+                  ),
+                ),
+            ],
+          )
+        : Container(
+            color: Colors.grey,
+          );
   }
 }

@@ -6,5 +6,5 @@ abstract class MediaAsset {
 
   MediaAsset(this.checksum, this.timestamp);
 
-  Future<Widget?> getPreview();
+  Future<Widget> getPreview();
 }

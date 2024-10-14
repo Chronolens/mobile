@@ -65,7 +65,7 @@ class ImageGridState extends State<ImageGrid> {
       return _thumbnailCache[asset.checksum];
     }
 
-    final Widget? thumbnail = await asset.getPreview();
+    final Widget thumbnail = await asset.getPreview();
     _thumbnailCache[asset.checksum] = thumbnail;
     return thumbnail;
 

@@ -13,20 +13,16 @@ class PreviewContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return thumbnail != null
-        ? GestureDetector(
-            onTap: () async {
-              if (asset is LocalMedia && ((asset as LocalMedia).remoteId == null)) {
-                print('File tapped: ${(asset as LocalMedia).path}');
-                APIServiceClient().uploadFileStream((asset as LocalMedia).path);
-              } else {
-                print("This is remote: ${asset.checksum}");
-              }
-            },
-            child: thumbnail,
-          )
-        : Container(
-            color: Colors.grey,
-          );
+    return GestureDetector(
+      onTap: () async {
+        if (asset is LocalMedia && ((asset as LocalMedia).remoteId == null)) {
+          print('File tapped: ${(asset as LocalMedia).path}');
+          APIServiceClient().uploadFileStream((asset as LocalMedia).path);
+        } else {
+          print("This is remote: ${asset.checksum}");
+        }
+      },
+      child: thumbnail,
+    );
   }
 }

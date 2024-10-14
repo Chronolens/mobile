@@ -22,29 +22,33 @@ class RemoteMedia extends MediaAsset {
   }
 
   @override
-  Future<Widget?> getPreview() async {
+  Future<Widget> getPreview() async {
     String imgUrl = await APIServiceClient().getPreview(id);
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: Image.network(imgUrl).image,
-              fit: BoxFit.cover,
-            ),
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-        ),
-        Positioned(
-          top: 8.0,
-          right: 8.0,
-          child: Icon(
-            Icons.cloud,
-            color: Colors.black,
-            size: 24.0,
-          ),
-        ),
-      ],
-    );
+    return imgUrl != ""
+        ? Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: Image.network(imgUrl).image,
+                    fit: BoxFit.cover,
+                  ),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+              Positioned(
+                top: 8.0,
+                right: 8.0,
+                child: Icon(
+                  Icons.cloud,
+                  color: Colors.black,
+                  size: 24.0,
+                ),
+              ),
+            ],
+          )
+        : Container(
+            color: Colors.grey,
+          );
   }
 }
