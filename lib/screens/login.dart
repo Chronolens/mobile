@@ -1,4 +1,3 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
@@ -28,9 +27,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _loadServerAddress() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      serverAddress = prefs.getString(BASE_URL) ?? "";
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    setState(() async {
+      serverAddress = await prefs.getString(BASE_URL) ?? "";
       isLoadingServerAddress = false;
     });
   }

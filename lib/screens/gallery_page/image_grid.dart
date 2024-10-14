@@ -1,9 +1,6 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/services/sync_manager.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'preview_container.dart';
 
@@ -11,10 +8,10 @@ class ImageGrid extends StatefulWidget {
   const ImageGrid({super.key});
 
   @override
-  _ImageGridState createState() => _ImageGridState();
+  ImageGridState createState() => ImageGridState();
 }
 
-class _ImageGridState extends State<ImageGrid> {
+class ImageGridState extends State<ImageGrid> {
   static const _pageSize = 40;
   final PagingController<int, MediaAsset> _pagingController =
       PagingController(firstPageKey: 0);

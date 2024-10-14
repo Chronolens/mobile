@@ -1,16 +1,16 @@
-import 'package:mime/mime.dart';
-import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:mime/mime.dart';
+import 'package:mobile/model/login_request.dart';
+import 'package:mobile/model/login_response.dart';
 import 'package:mobile/model/remote_media_asset.dart';
 import 'package:mobile/utils/constants.dart';
 import 'package:mobile/utils/time.dart';
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mobile/model/login_request.dart';
-import 'package:mobile/model/login_response.dart';
 
 class APIServiceClient {
   Future<int?> login(String username, String password, String baseUrl) async {
@@ -31,7 +31,7 @@ class APIServiceClient {
         final storage = FlutterSecureStorage();
         await storage.write(key: JWT_TOKEN, value: loginResponse.token);
 
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        final SharedPreferencesAsync prefs = SharedPreferencesAsync();
         await prefs.setString(BASE_URL, baseUrl);
       }
       return response.statusCode;
@@ -72,8 +72,8 @@ class APIServiceClient {
   // }
 
   Future<void> uploadFileStream(String filePath) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String baseUrl = prefs.getString(BASE_URL) ?? "";
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/image/upload');
     final storage = FlutterSecureStorage();
     final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
@@ -120,8 +120,8 @@ class APIServiceClient {
   }
 
   Future<Map<String, RemoteMedia>> syncFullRemote() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String baseUrl = prefs.getString(BASE_URL) ?? "";
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/sync/full');
     final storage = FlutterSecureStorage();
     final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
@@ -150,34 +150,33 @@ class APIServiceClient {
     }
   }
 
-  Future<List> syncPartialRemote(String lastSync) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String baseUrl = prefs.getString(BASE_URL) ?? "";
+  Future<List> syncPartialRemote(int lastSync) async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/sync/partial');
     final storage = FlutterSecureStorage();
     final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
 
     Map<String, String> headers = {
       HttpHeaders.authorizationHeader: "Bearer $jwtToken",
-      "Since": lastSync
+      "Since": lastSync.toString()
     };
 
     try {
       var response = await http.get(uri, headers: headers);
       print("Body: ${response.body}");
       final Map<String, dynamic> sync = jsonDecode(response.body);
-        
-      return [sync["uploaded"],sync["deleted"]];
+
+      return [sync["uploaded"], sync["deleted"]];
     } catch (e) {
       print("Exception $e");
       return [];
     }
-        print("Finished syncPartial()");
   }
 
   Future<String> getPreview(String uuid) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String baseUrl = prefs.getString(BASE_URL) ?? "";
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/preview/$uuid');
     final storage = FlutterSecureStorage();
     final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";

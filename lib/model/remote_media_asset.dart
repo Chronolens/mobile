@@ -1,10 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:http/http.dart' as http;
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/services/api_service.dart';
-import 'package:photo_manager/photo_manager.dart';
 
 class RemoteMedia extends MediaAsset {
   String id;

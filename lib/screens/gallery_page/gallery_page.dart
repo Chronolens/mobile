@@ -10,10 +10,10 @@ class GalleryPage extends StatefulWidget {
   const GalleryPage({super.key});
 
   @override
-  _GalleryPageState createState() => _GalleryPageState();
+  GalleryPageState createState() => GalleryPageState();
 }
 
-class _GalleryPageState extends State<GalleryPage> {
+class GalleryPageState extends State<GalleryPage> {
   bool _permissionState = false; 
 
   @override
