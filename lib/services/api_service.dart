@@ -119,7 +119,7 @@ class APIServiceClient {
     }
   }
 
-  Future<Map<String, RemoteMedia>> syncFull() async {
+  Future<Map<String, RemoteMedia>> syncFullRemote() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String baseUrl = prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/sync/full');
@@ -137,6 +137,7 @@ class APIServiceClient {
 
       final Map<String, RemoteMedia> mediaMap =
           sync.map<String, RemoteMedia>((key, value) {
+        //Map of Id -> (hash,created_at)
         return MapEntry(key, RemoteMedia.fromJson(value, key));
       });
       print("Sync $mediaMap");
@@ -147,6 +148,31 @@ class APIServiceClient {
       print("Exception $e");
       return <String, RemoteMedia>{};
     }
+  }
+
+  Future<List> syncPartialRemote(String lastSync) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String baseUrl = prefs.getString(BASE_URL) ?? "";
+    var uri = Uri.parse('$baseUrl/sync/partial');
+    final storage = FlutterSecureStorage();
+    final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+
+    Map<String, String> headers = {
+      HttpHeaders.authorizationHeader: "Bearer $jwtToken",
+      "Since": lastSync
+    };
+
+    try {
+      var response = await http.get(uri, headers: headers);
+      print("Body: ${response.body}");
+      final Map<String, dynamic> sync = jsonDecode(response.body);
+        
+      return [sync["uploaded"],sync["deleted"]];
+    } catch (e) {
+      print("Exception $e");
+      return [];
+    }
+        print("Finished syncPartial()");
   }
 
   Future<String> getPreview(String uuid) async {

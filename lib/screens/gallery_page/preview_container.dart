@@ -8,8 +8,7 @@ class PreviewContainer extends StatelessWidget {
   final MediaAsset asset;
   final Widget? thumbnail;
 
-  const PreviewContainer({Key? key, required this.asset, this.thumbnail})
-      : super(key: key);
+  const PreviewContainer({super.key, required this.asset, this.thumbnail});
 
   // #TODO:
 

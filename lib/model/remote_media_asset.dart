@@ -11,8 +11,16 @@ class RemoteMedia extends MediaAsset {
 
   RemoteMedia(this.id, super.checksum, super.timestamp);
 
-  factory RemoteMedia.fromJson(Map<String, dynamic> json, String checksum) {
-    final id = json['id'] as String;
+  // Add this method to convert the object to a JSON-serializable map
+  Map<String, dynamic> toJson() {
+    return {
+      'hash': super.checksum,
+      'created_at': super.timestamp,
+    };
+  }
+
+  factory RemoteMedia.fromJson(Map<String, dynamic> json, String id) {
+    final checksum = json['hash'] as String;
     final timestamp = json['created_at'] as int;
     return RemoteMedia(id, checksum, timestamp);
   }

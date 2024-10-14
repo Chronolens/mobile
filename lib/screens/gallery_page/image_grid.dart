@@ -24,7 +24,7 @@ class _ImageGridState extends State<ImageGrid> {
   bool _isPathsLoaded = false; // Add this flag
 
   Future<void> initSyncManager() async {
-    paths = await SyncManager().syncResolver();
+    paths = await SyncManager().sync();
     setState(() {
       _isPathsLoaded = true; // Update the flag after paths are loaded
     });

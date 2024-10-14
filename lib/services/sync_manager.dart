@@ -3,11 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/model/media_info.dart';
 import 'package:mobile/model/remote_media_asset.dart';
 import 'package:mobile/services/api_service.dart';
+import 'package:mobile/utils/constants.dart';
 import 'package:mobile/utils/time.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -15,46 +17,150 @@ class SyncManager {
   //Native Module
   static const platform = MethodChannel('com.example.mobile/images');
 
-  Future<Map<String, MediaInfo>> getAllImagePathsNative() async {
-    final start = DateTime.now().millisecondsSinceEpoch;
-    print("Starting");
+  Future<List<MediaAsset>> sync() async {
+    final storage = FlutterSecureStorage();
+    String? lastSync = await storage.read(key: LAST_SYNC);
+
+    Map<String, RemoteMedia> remoteAssets = HashMap();
+    Map<String, MediaInfo> localAssets = HashMap();
+
+    if (lastSync == null) {
+      // DO FULL SYNC
+      List<MediaInfo> local = await getAllImagePathsNative();
+
+      Map<String, String> checksumCache = HashMap();
+
+      // Generate hashes
+      for (var localMedia in local) {
+        File file = File(localMedia.path);
+        final fileStream = file.openRead();
+        String checksum =
+            base64.encode((await sha256.bind(fileStream).first).bytes);
+        // Add to checksum cache
+        checksumCache[localMedia.id] = checksum;
+        // Add to local_assets
+        localAssets[checksum] = localMedia;
+      }
+
+      await storage.write(
+          key: CHECKSUM_CACHE, value: jsonEncode(checksumCache));
+
+      // Map of remote id to RemoteMedia
+      Map<String, RemoteMedia> remote =
+          await APIServiceClient().syncFullRemote();
+
+      await storage.write(
+          key: LAST_SYNC,
+          value: DateTime.now().millisecondsSinceEpoch.toString());
+
+      await storage.write(key: REMOTE_ASSETS, value: jsonEncode(remote));
+
+      for (var remoteMedia in remote.entries) {
+        remoteAssets[remoteMedia.value.checksum] = remoteMedia.value;
+      }
+    } else {
+      // DO PARTIAL SYNC
+
+      List<MediaInfo> local = await getAllImagePathsNative();
+
+      String? checksumCacheJson = await storage.read(key: CHECKSUM_CACHE);
+      if (checksumCacheJson != null) {
+        // Decode the JSON and cast it properly
+        Map<String, dynamic> decodedChecksumCache =
+            jsonDecode(checksumCacheJson);
+        Map<String, String> checksumCache =
+            decodedChecksumCache.cast<String, String>();
+
+        for (var localMedia in local) {
+          String? hashLookup = checksumCache[localMedia.id];
+          String checksum;
+          if (hashLookup != null) {
+            checksum = hashLookup;
+          } else {
+            File file = File(localMedia.path);
+            final fileStream = file.openRead();
+            checksum =
+                base64.encode((await sha256.bind(fileStream).first).bytes);
+            // Add to hash cache
+            checksumCache[localMedia.id] = checksum;
+          }
+          // Add to local_assets
+          localAssets[checksum] = localMedia;
+        }
+
+        // Store the checksum cache again
+        await storage.write(
+            key: CHECKSUM_CACHE, value: jsonEncode(checksumCache));
+
+        // Sync partial remote
+        List remote = await APIServiceClient().syncPartialRemote(lastSync);
+        await storage.write(
+            key: LAST_SYNC,
+            value: DateTime.now().millisecondsSinceEpoch.toString());
+
+        // Map the uploaded items from the remote sync
+        final Map<String, RemoteMedia> uploadedMap =
+            (remote[0] as Map).map<String, RemoteMedia>((key, value) {
+          return MapEntry(key, RemoteMedia.fromJson(value, key));
+        });
+
+        // Cast the list of deleted items to List<String>
+        List<String> deletedList = (remote[1] as List).cast<String>();
+
+        // Get the remote media from local storage
+        String? savedRemoteMediaJson = await storage.read(key: REMOTE_ASSETS);
+        Map<String, RemoteMedia> savedRemoteMedia =
+            (jsonDecode(savedRemoteMediaJson!) as Map<String, dynamic>)
+                .map<String, RemoteMedia>((key, value) =>
+                    MapEntry(key, RemoteMedia.fromJson(value, key)));
+
+        // Add the uploaded items to saved remote media
+        for (var uploadedMedia in uploadedMap.entries) {
+          savedRemoteMedia[uploadedMedia.key] = uploadedMedia.value;
+        }
+
+        // Remove the deleted items from saved remote media
+        for (var deleted in deletedList) {
+          savedRemoteMedia.remove(deleted);
+        }
+
+        // Save the updated remote media to local storage
+        await storage.write(
+            key: REMOTE_ASSETS, value: jsonEncode(savedRemoteMedia));
+
+        // Update remoteAssets with the checksums
+        for (var remoteMedia in savedRemoteMedia.entries) {
+          remoteAssets[remoteMedia.value.checksum] = remoteMedia.value;
+        }
+      }
+    }
+
+    // Call syncResolver with localAssets and remoteAssets
+    return await syncResolver(localAssets, remoteAssets);
+  }
+
+  Future<List<MediaInfo>> getAllImagePathsNative() async {
     try {
       // Call the method on the platform (Android in this case)
       final List<dynamic> paths =
           await platform.invokeMethod('getAllImagePathsNative');
 
-      Map<String, MediaInfo> mediaInfo = HashMap();
-
+      List<MediaInfo> localMediaInfo = [];
       for (var pair in paths.take(64)) {
         List<String> s =
             (pair as List<dynamic>).map((e) => e.toString()).toList();
-
         File file = File(s[0]);
-        final fileStream = file.openRead();
-        final checksum =
-            base64.encode((await sha256.bind(fileStream).first).bytes);
-        mediaInfo[checksum] = MediaInfo(s[0], await getFileStamp(file), s[1]);
+        localMediaInfo.add(MediaInfo(s[0], await getFileStamp(file), s[1]));
       }
 
-      final end = DateTime.now().millisecondsSinceEpoch;
-      print("It took ${(end - start)}");
-      print("Finished getAllImagePathsNative()");
-      return mediaInfo;
-    } on PlatformException catch (e) {
-      print("Failed to get image paths: '${e.message}'.");
-      return HashMap();
+      return localMediaInfo;
+    } on PlatformException catch (_) {
+      return [];
     }
   }
 
-  Future<List<MediaAsset>> syncResolver(
-      /* Map<String, MediaInfo> localMediaInfo,
-      Map<String, RemoteMedia> remoteMediaInfo */
-      ) async {
-    final start = DateTime.now().millisecondsSinceEpoch;
-    Map<String, MediaInfo> localMediaInfo = await getAllImagePathsNative();
-    Map<String, RemoteMedia> remoteMediaInfo =
-        await APIServiceClient().syncFull();
-
+  Future<List<MediaAsset>> syncResolver(Map<String, MediaInfo> localMediaInfo,
+      Map<String, RemoteMedia> remoteMediaInfo) async {
     List<MediaAsset> mediaAssets = [];
     HashSet<String> localAndRemoteHashes = HashSet();
 
@@ -75,13 +181,10 @@ class SyncManager {
 
     mediaAssets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    int i = 0;
     for (var a in mediaAssets) {
       print(
           "Media:${a.checksum} | ${a.timestamp} | ${a is LocalMedia ? "true" : "false"}");
     }
-    final end = DateTime.now().millisecondsSinceEpoch;
-    print("It ALL took ${(end - start)}");
     print("DONE");
     return mediaAssets;
   }
