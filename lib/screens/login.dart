@@ -1,6 +1,7 @@
 import 'package:mobile/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import '../utils/theme.dart';
 import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -72,61 +73,110 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
 
-    Widget buildPassword() => TextField(
-          onChanged: (value) => setState(() => password = value),
-          decoration: InputDecoration(
-            labelText: 'Password',
-            suffixIcon: IconButton(
-              icon: isPasswordVisible
-                  ? const Icon(Icons.visibility)
-                  : const Icon(Icons.visibility_off),
-              onPressed: () =>
-                  setState(() => isPasswordVisible = !isPasswordVisible),
+    Widget buildPassword() => Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          child: TextField(
+            onChanged: (value) => setState(() => password = value),
+            decoration: InputDecoration(
+              labelText: 'Password',
+              labelStyle: const TextStyle(color: Colors.white),
+              suffixIcon: IconButton(
+                icon: isPasswordVisible
+                    ? const Icon(Icons.visibility, color: Colors.white)
+                    : const Icon(Icons.visibility_off, color: Colors.white),
+                onPressed: () =>
+                    setState(() => isPasswordVisible = !isPasswordVisible),
+              ),
+              enabledBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+              ),
             ),
-            border: const OutlineInputBorder(),
+            obscureText: !isPasswordVisible,
+            style: const TextStyle(color: Colors.white),
           ),
-          obscureText: !isPasswordVisible,
         );
 
-    Widget buildUsername() => TextField(
-          onChanged: (value) => setState(() => username = value),
-          decoration: const InputDecoration(
-            labelText: 'Username',
-            border: OutlineInputBorder(),
+    Widget buildUsername() => Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          child: TextField(
+            onChanged: (value) => setState(() => username = value),
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              labelStyle: TextStyle(color: Colors.white),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+              ),
+            ),
+            style: const TextStyle(color: Colors.white),
           ),
         );
 
     Widget buildServer() {
       if (isLoadingServerAddress) {
-        return const CircularProgressIndicator(); // TODO: Do a full loading page instead??
+        return const CircularProgressIndicator();
       }
-      return TextFormField(
-        //key: ValueKey(serverAddress),
-        initialValue: serverAddress,
-        onChanged: (value) => setState(() => serverAddress = value),
-        decoration: const InputDecoration(
-          labelText: 'Server',
-          border: OutlineInputBorder(),
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 32), 
+        child: TextFormField(
+          initialValue: serverAddress,
+          onChanged: (value) => setState(() => serverAddress = value),
+          decoration: const InputDecoration(
+            labelText: 'Server',
+            labelStyle: TextStyle(color: Colors.white),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white),
+            ),
+          ),
+          style: const TextStyle(color: Colors.white),
         ),
       );
     }
 
     Widget loginButton() => TextButton(
           onPressed: () => login(username, password),
-          child: const Text("Log In"),
+          child: const Text("Log In", style: TextStyle(color: Colors.white)),
         );
 
     return Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            buildServer(),
-            buildUsername(),
-            buildPassword(),
-            loginButton()
-          ]),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppTheme.darkPurple, Colors.black],
+          ),
         ),
-        floatingActionButton: FloatingActionButton(
-            onPressed: () => Navigator.of(context).pushReplacementNamed("/")));
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Spacer(flex: 5),
+              buildServer(),
+              const SizedBox(height: 16),
+              buildUsername(),
+              const SizedBox(height: 16),
+              buildPassword(),
+              const SizedBox(height: 16),
+              loginButton(),
+              Spacer(flex: 2),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.of(context).pushReplacementNamed("/"),
+        child: const Icon(Icons.arrow_forward, color: Colors.white),
+      ),
+    );
   }
 }
