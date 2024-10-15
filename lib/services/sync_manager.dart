@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/model/media_info.dart';
@@ -13,6 +14,8 @@ import 'package:mobile/utils/time.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SyncManager {
+  int total = 0;
+  final ValueNotifier<int> current = ValueNotifier<int>(0);
   //Native Module
   static const platform = MethodChannel('com.example.mobile/images');
 
@@ -23,9 +26,14 @@ class SyncManager {
     Map<String, RemoteMedia> remoteAssets = HashMap();
     Map<String, MediaInfo> localAssets = HashMap();
 
+    List<MediaInfo> local = await getAllImagePathsNative();
+    for (var mi in local) {
+        print(mi.path);
+    }
+    total = local.length;
+
     if (lastSync == null) {
       // DO FULL SYNC
-      List<MediaInfo> local = await getAllImagePathsNative();
 
       Map<String, String> checksumCache = HashMap();
 
@@ -39,6 +47,7 @@ class SyncManager {
         checksumCache[localMedia.id] = checksum;
         // Add to local_assets
         localAssets[checksum] = localMedia;
+        current.value++;
       }
 
       await asyncPrefs.setString(CHECKSUM_CACHE, jsonEncode(checksumCache));
@@ -57,8 +66,6 @@ class SyncManager {
     } else {
       // DO PARTIAL SYNC
 
-      List<MediaInfo> local = await getAllImagePathsNative();
-
       String? checksumCacheJson = await asyncPrefs.getString(CHECKSUM_CACHE);
       if (checksumCacheJson != null) {
         // Decode the JSON and cast it properly
@@ -70,15 +77,15 @@ class SyncManager {
         for (var localMedia in local) {
           String? hashLookup = checksumCache[localMedia.id];
           String checksum;
-          if (hashLookup != null) {
-            checksum = hashLookup;
-          } else {
+          if (hashLookup == null) {
             File file = File(localMedia.path);
             final fileStream = file.openRead();
             checksum =
                 base64.encode((await sha256.bind(fileStream).first).bytes);
             // Add to hash cache
             checksumCache[localMedia.id] = checksum;
+          } else {
+            checksum = hashLookup;
           }
           // Add to local_assets
           localAssets[checksum] = localMedia;
@@ -120,8 +127,7 @@ class SyncManager {
         }
 
         // Save the updated remote media to local storage
-        await asyncPrefs.setString(
-            REMOTE_ASSETS,jsonEncode(savedRemoteMedia));
+        await asyncPrefs.setString(REMOTE_ASSETS, jsonEncode(savedRemoteMedia));
 
         // Update remoteAssets with the checksums
         for (var remoteMedia in savedRemoteMedia.entries) {
@@ -141,7 +147,7 @@ class SyncManager {
           await platform.invokeMethod('getAllImagePathsNative');
 
       List<MediaInfo> localMediaInfo = [];
-      for (var pair in paths.take(256)) {
+      for (var pair in paths) {
         List<String> s =
             (pair as List<dynamic>).map((e) => e.toString()).toList();
         File file = File(s[0]);
