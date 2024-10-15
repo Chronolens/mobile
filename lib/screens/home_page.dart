@@ -22,43 +22,44 @@ class HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _pages,
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.photo),
-              label: 'Gallery',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.photo_album),
-              label: 'Albums',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.search),
-              label: 'Search',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings),
-              label: 'Settings',
-            ),
-          ],
-          selectedItemColor: Colors.deepPurpleAccent.shade700,
-          unselectedItemColor: Colors.grey,
-        ),
-        floatingActionButton: FloatingActionButton(
-            onPressed: () => {}));
+      backgroundColor: Colors.black,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, 
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.photo),
+            label: 'Gallery',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.photo_album),
+            label: 'Albums',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
+        selectedItemColor: Colors.purple,
+        unselectedItemColor: Colors.grey,
+      ),
+    );
   }
 }
