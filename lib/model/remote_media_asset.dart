@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/services/api_service.dart';
@@ -24,31 +25,33 @@ class RemoteMedia extends MediaAsset {
   @override
   Future<Widget> getPreview() async {
     String imgUrl = await APIServiceClient().getPreview(id);
-    return imgUrl != ""
-        ? Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: Image.network(imgUrl).image,
-                    fit: BoxFit.cover,
-                  ),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-              Positioned(
-                top: 8.0,
-                right: 8.0,
-                child: Icon(
-                  Icons.cloud,
-                  color: Colors.black,
-                  size: 24.0,
-                ),
-              ),
-            ],
-          )
-        : Container(
-            color: Colors.grey,
-          );
+    final thumbnail = CachedNetworkImage(
+      imageUrl: imgUrl,
+      imageBuilder: (context, imageProvider) => Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: imageProvider,
+            fit: BoxFit.cover,
+          ),
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+      ),
+      placeholder: (context, url) => CircularProgressIndicator(),
+      errorWidget: (context, url, error) => Icon(Icons.error),
+    );
+    return Stack(
+      children: [
+        thumbnail,
+        Positioned(
+          top: 8.0,
+          right: 8.0,
+          child: Icon(
+            Icons.cloud,
+            size: 24.0,
+            color: Colors.purple.shade400,
+          ),
+        ),
+      ],
+    );
   }
 }

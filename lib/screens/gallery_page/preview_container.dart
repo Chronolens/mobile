@@ -31,13 +31,3 @@ class PreviewContainerState extends State<PreviewContainer> {
     );
   }
 }
-                //if (_isUploaded) // Widget for the icon, still need to change all icons to the icon pack in the design
-                //  Positioned(
-                //    top: 8.0,  
-                //    right: 8.0, 
-                //    child: Icon(
-                //      Icons.cloud_done, 
-                //      size: 24.0,       
-                //      color: Colors.purple.shade400, 
-                //    ),
-                //  ),
