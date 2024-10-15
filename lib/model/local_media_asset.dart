@@ -6,14 +6,16 @@ class LocalMedia extends MediaAsset {
   String? remoteId;
   String path;
   String id;
+  AssetEntity? asset;
 
   LocalMedia(
-      this.remoteId, this.path, this.id, super.checksum, super.timestamp);
+      this.remoteId, this.path, this.id, super.checksum, super.timestamp)
+    : asset = null;
 
   @override
   Future<Widget> getPreview() async {
-    final preview = await AssetEntity.fromId(id);
-    final thumbnail = await preview?.thumbnailData;
+    asset ??= await AssetEntity.fromId(id);
+    final thumbnail = await asset?.thumbnailData;
 
     return thumbnail != null
         ? Stack(
@@ -27,14 +29,15 @@ class LocalMedia extends MediaAsset {
                   borderRadius: BorderRadius.circular(8.0),
                 ),
               ),
-              if (remoteId != null) // Only add the icon if remoteId is not null
+              if (remoteId !=
+                  null) // Widget for the icon, still need to change all icons to the icon pack in the design
                 Positioned(
                   top: 8.0,
                   right: 8.0,
                   child: Icon(
-                    Icons.cloud,
-                    color: Colors.black,
+                    Icons.cloud_done,
                     size: 24.0,
+                    color: Colors.purple.shade400,
                   ),
                 ),
             ],

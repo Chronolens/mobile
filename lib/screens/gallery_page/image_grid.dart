@@ -68,8 +68,12 @@ class ImageGridState extends State<ImageGrid> {
     final Widget thumbnail = await asset.getPreview();
     _thumbnailCache[asset.checksum] = thumbnail;
     return thumbnail;
+  }
 
-
+  Future<void> _refreshList() async {
+    paths = await SyncManager().sync();
+    _thumbnailCache.clear();
+    _pagingController.refresh();
   }
 
   @override
@@ -80,42 +84,43 @@ class ImageGridState extends State<ImageGrid> {
         child: CircularProgressIndicator(),
       );
     }
-
-    return PagedGridView<int, MediaAsset>(
-      pagingController: _pagingController,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 2.0,
-        mainAxisSpacing: 2.0,
-      ),
-      builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
-        itemBuilder: (context, asset, index) {
-          return FutureBuilder<Widget?>(
-            future: _getThumbnail(asset),
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                return PreviewContainer(
-                  asset: asset,
-                  thumbnail: snapshot.data,
-                );
-              } else {
-                return Container(
-                  color: Colors.grey[300],
-                );
-              }
+    return RefreshIndicator(
+        onRefresh: _refreshList,
+        child: PagedGridView<int, MediaAsset>(
+          pagingController: _pagingController,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 2.0,
+            mainAxisSpacing: 2.0,
+          ),
+          builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
+            itemBuilder: (context, asset, index) {
+              return FutureBuilder<Widget?>(
+                future: _getThumbnail(asset),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return PreviewContainer(
+                      asset: asset,
+                      thumbnail: snapshot.data,
+                    );
+                  } else {
+                    return Container(
+                      color: Colors.grey[300],
+                    );
+                  }
+                },
+              );
             },
-          );
-        },
-        firstPageErrorIndicatorBuilder: (context) => Center(
-          child: Text('Failed to load images'),
-        ),
-        newPageErrorIndicatorBuilder: (context) => Center(
-          child: Text('Failed to load more images'),
-        ),
-        noItemsFoundIndicatorBuilder: (context) => Center(
-          child: Text('No images found'),
-        ),
-      ),
-    );
+            firstPageErrorIndicatorBuilder: (context) => Center(
+              child: Text('Failed to load images'),
+            ),
+            newPageErrorIndicatorBuilder: (context) => Center(
+              child: Text('Failed to load more images'),
+            ),
+            noItemsFoundIndicatorBuilder: (context) => Center(
+              child: Text('No images found'),
+            ),
+          ),
+        ));
   }
 }
