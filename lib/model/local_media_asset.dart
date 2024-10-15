@@ -21,7 +21,7 @@ class LocalMedia extends MediaAsset {
               Container(
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: Image.memory(thumbnail!).image,
+                    image: Image.memory(thumbnail).image,
                     fit: BoxFit.cover,
                   ),
                   borderRadius: BorderRadius.circular(8.0),
