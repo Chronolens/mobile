@@ -19,9 +19,10 @@ class ImageGridState extends State<ImageGrid> {
   final Map<String, Widget?> _thumbnailCache = {};
   List<MediaAsset> paths = [];
   bool _isPathsLoaded = false; // Add this flag
+  final SyncManager syncManager = SyncManager();
 
   Future<void> initSyncManager() async {
-    paths = await SyncManager().sync();
+    paths = await syncManager.sync();
     setState(() {
       _isPathsLoaded = true; // Update the flag after paths are loaded
     });
@@ -71,7 +72,7 @@ class ImageGridState extends State<ImageGrid> {
   }
 
   Future<void> _refreshList() async {
-    paths = await SyncManager().sync();
+    paths = await syncManager.sync();
     _thumbnailCache.clear();
     _pagingController.refresh();
   }
@@ -81,46 +82,70 @@ class ImageGridState extends State<ImageGrid> {
     // Show a loading indicator until paths are loaded
     if (!_isPathsLoaded) {
       return Center(
-        child: CircularProgressIndicator(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Progress bar
+            ValueListenableBuilder<int>(
+              valueListenable: syncManager.current,
+              builder: (context, done, _) {
+                return Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: syncManager.total == 0 ? 0 : done / syncManager.total, // Progress bar value
+                      minHeight: 10,
+                      backgroundColor: Colors.grey[300],
+                      color: Colors.blue,
+                    ),
+                    SizedBox(height: 20),
+                    // Done / Total Text
+                    Text('$done / ${syncManager.total} tasks completed'),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
       );
+    } else {
+      return RefreshIndicator(
+          onRefresh: _refreshList,
+          child: PagedGridView<int, MediaAsset>(
+            pagingController: _pagingController,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 2.0,
+              mainAxisSpacing: 2.0,
+            ),
+            builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
+              itemBuilder: (context, asset, index) {
+                return FutureBuilder<Widget?>(
+                  future: _getThumbnail(asset),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return PreviewContainer(
+                        asset: asset,
+                        thumbnail: snapshot.data,
+                      );
+                    } else {
+                      return Container(
+                        color: Colors.grey[300],
+                      );
+                    }
+                  },
+                );
+              },
+              firstPageErrorIndicatorBuilder: (context) => Center(
+                child: Text('Failed to load images'),
+              ),
+              newPageErrorIndicatorBuilder: (context) => Center(
+                child: Text('Failed to load more images'),
+              ),
+              noItemsFoundIndicatorBuilder: (context) => Center(
+                child: Text('No images found'),
+              ),
+            ),
+          ));
     }
-    return RefreshIndicator(
-        onRefresh: _refreshList,
-        child: PagedGridView<int, MediaAsset>(
-          pagingController: _pagingController,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            crossAxisSpacing: 2.0,
-            mainAxisSpacing: 2.0,
-          ),
-          builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
-            itemBuilder: (context, asset, index) {
-              return FutureBuilder<Widget?>(
-                future: _getThumbnail(asset),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return PreviewContainer(
-                      asset: asset,
-                      thumbnail: snapshot.data,
-                    );
-                  } else {
-                    return Container(
-                      color: Colors.grey[300],
-                    );
-                  }
-                },
-              );
-            },
-            firstPageErrorIndicatorBuilder: (context) => Center(
-              child: Text('Failed to load images'),
-            ),
-            newPageErrorIndicatorBuilder: (context) => Center(
-              child: Text('Failed to load more images'),
-            ),
-            noItemsFoundIndicatorBuilder: (context) => Center(
-              child: Text('No images found'),
-            ),
-          ),
-        ));
   }
 }
