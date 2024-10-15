@@ -27,9 +27,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _loadServerAddress() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    final serverAddressPrefs = await prefs.getString(BASE_URL) ?? "";
     setState(() {
-      serverAddress = prefs.getString(BASE_URL) ?? "";
+      serverAddress = serverAddressPrefs;
       isLoadingServerAddress = false;
     });
   }
@@ -62,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
 
       switch (response) {
         case 200:
-          Navigator.of(context).pushReplacementNamed("/");
+          Navigator.of(context).pushReplacementNamed("/home");
         case 401:
           showErrorDialog(context, LOGIN_ERROR_401);
         case null:
@@ -127,6 +128,7 @@ class _LoginPageState extends State<LoginPage> {
           ]),
         ),
         floatingActionButton: FloatingActionButton(
-            onPressed: () => Navigator.of(context).pushReplacementNamed("/")));
+            onPressed: () =>
+                {Navigator.of(context).pushReplacementNamed("/home")}));
   }
 }

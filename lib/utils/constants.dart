@@ -5,4 +5,6 @@ const String BASE_URL = "baseUrl";
 const String CHECKSUM = 'checksum';
 
 const String JWT_TOKEN = "jwtToken";
-String getAuthHeader(jwtToken) => "Bearer $jwtToken";
+const String LAST_SYNC  = "lastSync";
+const String CHECKSUM_CACHE  = "checksumCache";
+const String REMOTE_ASSETS  = "remoteAssets";

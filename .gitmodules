@@ -1,4 +1,0 @@
-[submodule "proto"]
-	path = proto
-	url = ssh://git@github.com/chronolens/gateway-protocol
-	branch = main
