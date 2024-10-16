@@ -1,76 +1,43 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+import 'package:mobile/model/local_media_asset.dart';
+import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/services/api_service.dart';
 
 class PreviewContainer extends StatefulWidget {
-  final AssetEntity asset;
-  final Uint8List? thumbnail;
+  final MediaAsset asset;
+  final Widget? thumbnail;
 
-  const PreviewContainer({Key? key, required this.asset, this.thumbnail})
-      : super(key: key);
+  const PreviewContainer({super.key, required this.asset, this.thumbnail});
 
   @override
-  _PreviewContainerState createState() => _PreviewContainerState();
+  PreviewContainerState createState() => PreviewContainerState();
 }
 
-class _PreviewContainerState extends State<PreviewContainer> {
-  bool _isUploaded = false; 
-
-  Future<String?> _getFilePath(AssetEntity asset) async {
-    final file = await asset.file;
-    return file?.path;
-  }
-
-  Future<void> _uploadFile(String filePath) async {
-    print('File tapped: ${widget.asset.title}');
-    await APIServiceClient().uploadFileStream(filePath);
-    
-    setState(() {
-      _isUploaded = true;
-    });
-  }
-
+class PreviewContainerState extends State<PreviewContainer> {
   @override
   Widget build(BuildContext context) {
-    return widget.thumbnail != null
-        ? GestureDetector(
-            onTap: () async {
-              var filePath = await _getFilePath(widget.asset);
-
-              if (filePath != null) {
-                await _uploadFile(filePath);
-              } else {
-                print('Error: Unable to retrieve file path');
-              }
-            },
-            child: Stack(
-              children: [
-                
-                Container(
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: MemoryImage(widget.thumbnail!),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                
-                if (_isUploaded) // Widget for the icon, still need to change all icons to the icon pack in the design
-                  Positioned(
-                    top: 8.0,  
-                    right: 8.0, 
-                    child: Icon(
-                      Icons.cloud_done, 
-                      size: 24.0,       
-                      color: Colors.purple.shade400, 
-                    ),
-                  ),
-              ],
-            ),
-          )
-        : Container(
-            color: Colors.grey, 
-          );
+    return GestureDetector(
+      onTap: () async {
+        if (widget.asset is LocalMedia &&
+            ((widget.asset as LocalMedia).remoteId == null)) {
+          print('File tapped: ${(widget.asset as LocalMedia).path}');
+          APIServiceClient()
+              .uploadFileStream((widget.asset as LocalMedia).path);
+        } else {
+          print("This is remote: ${widget.asset.checksum}");
+        }
+      },
+      child: widget.thumbnail,
+    );
   }
 }
+                //if (_isUploaded) // Widget for the icon, still need to change all icons to the icon pack in the design
+                //  Positioned(
+                //    top: 8.0,  
+                //    right: 8.0, 
+                //    child: Icon(
+                //      Icons.cloud_done, 
+                //      size: 24.0,       
+                //      color: Colors.purple.shade400, 
+                //    ),
+                //  ),
