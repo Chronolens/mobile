@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
  
+   static const Color darkPurple = Color(0xFF392548);
+
   // For now we will only use dark theme but it seems simple enough to implement an alternative 
   // theme overriding the material theme TODO: Add the light theme with a switch button to change somewhere in settings
   static ThemeData darkTheme = ThemeData(

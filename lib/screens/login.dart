@@ -1,6 +1,7 @@
 import 'package:mobile/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import '../utils/theme.dart';
 import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -73,62 +74,148 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
 
-    Widget buildPassword() => TextField(
-          onChanged: (value) => setState(() => password = value),
-          decoration: InputDecoration(
-            labelText: 'Password',
-            suffixIcon: IconButton(
-              icon: isPasswordVisible
-                  ? const Icon(Icons.visibility)
-                  : const Icon(Icons.visibility_off),
-              onPressed: () =>
-                  setState(() => isPasswordVisible = !isPasswordVisible),
+    Widget buildPassword() => Container(
+          margin: const EdgeInsets.symmetric(horizontal: 48),
+          child: TextField(
+            onChanged: (value) => setState(() => password = value),
+            decoration: InputDecoration(
+              labelText: 'Password',
+              labelStyle: const TextStyle(color: Color.fromRGBO(255, 255, 255, 0.7)), 
+              suffixIcon: IconButton(
+                icon: isPasswordVisible
+                    ? const Icon(Icons.visibility, color: Colors.white70)  
+                    : const Icon(Icons.visibility_off, color: Colors.white70),
+                onPressed: () =>
+                    setState(() => isPasswordVisible = !isPasswordVisible),
+              ),
+              enabledBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white, width: 2), 
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white, width: 2), 
+              ),
             ),
-            border: const OutlineInputBorder(),
+            obscureText: !isPasswordVisible,
+            style: const TextStyle(color: Color.fromRGBO(255, 255, 255, 0.7)),  
           ),
-          obscureText: !isPasswordVisible,
         );
 
-    Widget buildUsername() => TextField(
-          onChanged: (value) => setState(() => username = value),
-          decoration: const InputDecoration(
-            labelText: 'Username',
-            border: OutlineInputBorder(),
+    Widget buildUsername() => Container(
+          margin: const EdgeInsets.symmetric(horizontal: 48),
+          child: TextField(
+            onChanged: (value) => setState(() => username = value),
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              labelStyle: TextStyle(color: Color.fromRGBO(255, 255, 255, 0.7)),  
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white, width: 2), 
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white, width: 2), 
+              ),
+            ),
+            style: const TextStyle(color: Color.fromRGBO(255, 255, 255, 0.7)),  
           ),
         );
 
     Widget buildServer() {
       if (isLoadingServerAddress) {
-        return const CircularProgressIndicator(); // TODO: Do a full loading page instead??
+        return const CircularProgressIndicator();
       }
-      return TextFormField(
-        //key: ValueKey(serverAddress),
-        initialValue: serverAddress,
-        onChanged: (value) => setState(() => serverAddress = value),
-        decoration: const InputDecoration(
-          labelText: 'Server',
-          border: OutlineInputBorder(),
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 48), 
+        child: TextFormField(
+          initialValue: serverAddress,
+          onChanged: (value) => setState(() => serverAddress = value),
+          decoration: const InputDecoration(
+            labelText: 'Server',
+            labelStyle: TextStyle(color: Color.fromRGBO(255, 255, 255, 0.7)),  
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white, width: 2), 
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white, width: 2), 
+            ),
+          ),
+          style: const TextStyle(color: Color.fromRGBO(255, 255, 255, 0.7)),  
         ),
       );
     }
 
-    Widget loginButton() => TextButton(
-          onPressed: () => login(username, password),
-          child: const Text("Log In"),
+
+    Widget loginButton() => Container(
+          margin: const EdgeInsets.symmetric(horizontal: 48), 
+          width: double.infinity, 
+          child: Material(
+            color: Colors.white, 
+            borderRadius: BorderRadius.circular(4), 
+            child: InkWell(
+              onTap: () => login(username, password), 
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12), 
+                child: Center(
+                  child: Text(
+                    "Log In",
+                    style: TextStyle(
+                      color: Colors.black, 
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+    
+    Widget buildTitle() => Container(
+          margin: const EdgeInsets.only(top: 128),  
+          alignment: Alignment.center,  
+          child: const Text(
+            "ChronoLens",
+            style: TextStyle(
+              fontSize: 38,  
+              fontWeight: FontWeight.normal,
+              color: Colors.white,  
+            ),
+            textAlign: TextAlign.center,  
+          ),
         );
 
     return Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            buildServer(),
-            buildUsername(),
-            buildPassword(),
-            loginButton()
-          ]),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppTheme.darkPurple, Colors.black],
+          ),
         ),
-        floatingActionButton: FloatingActionButton(
-            onPressed: () =>
-                {Navigator.of(context).pushReplacementNamed("/home")}));
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start, 
+              children: [
+                buildTitle(),  
+                const Spacer(flex: 5), 
+                buildServer(),
+                const SizedBox(height: 16),  
+                buildUsername(),
+                const SizedBox(height: 16),  
+                buildPassword(),
+                const SizedBox(height: 48),  
+                loginButton(),
+                const Spacer(flex: 4), 
+              ],
+            ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.of(context).pushReplacementNamed("/home"),
+        child: const Icon(Icons.arrow_forward, color: Colors.white),
+      ),
+    );
   }
 }
