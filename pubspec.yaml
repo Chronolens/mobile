@@ -1,0 +1,40 @@
+name: mobile
+description: "A self-hosted cloud gallery alternative."
+
+publish_to: 'none' 
+
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.3
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+  grpc: ^3.0.0
+  protobuf: ^3.0.0
+  maybe_just_nothing: ^0.5.3
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+  crypto: ^3.0.5
+
+  cupertino_icons: ^1.0.8
+  permission_handler: ^11.3.1
+  photo_manager: ^3.5.0
+  device_info_plus: ^10.1.2
+  infinite_scroll_pagination: ^4.0.0
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.12
+  protoc_builder: ^0.4.1
+  build: ^2.4.1
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
