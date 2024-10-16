@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+import 'package:mobile/model/media_asset.dart';
+import 'package:mobile/services/sync_manager.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'preview_container.dart';
 
@@ -8,37 +8,44 @@ class ImageGrid extends StatefulWidget {
   const ImageGrid({super.key});
 
   @override
-  _ImageGridState createState() => _ImageGridState();
+  ImageGridState createState() => ImageGridState();
 }
 
-class _ImageGridState extends State<ImageGrid> {
-  static const _pageSize = 20;
-  final PagingController<int, AssetEntity> _pagingController =
+class ImageGridState extends State<ImageGrid> {
+  static const _pageSize = 40;
+  final PagingController<int, MediaAsset> _pagingController =
       PagingController(firstPageKey: 0);
 
-  final Map<String, Uint8List?> _thumbnailCache = {};
+  final Map<String, Widget?> _thumbnailCache = {};
+  List<MediaAsset> paths = [];
+  bool _isPathsLoaded = false; // Add this flag
+
+  Future<void> initSyncManager() async {
+    paths = await SyncManager().sync();
+    setState(() {
+      _isPathsLoaded = true; // Update the flag after paths are loaded
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    _pagingController.addPageRequestListener((pageKey) {
-      _loadAssets(pageKey);
+    initSyncManager().then((_) {
+      _pagingController.addPageRequestListener((pageKey) {
+        if (_isPathsLoaded) {
+          _loadAssets(pageKey);
+        }
+      });
     });
   }
 
   Future<void> _loadAssets(int pageKey) async {
     try {
-      
-      final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
-        type: RequestType.fromTypes([RequestType.image,RequestType.video])
-      );
-
+      print("before paths");
       if (paths.isNotEmpty) {
-        final List<AssetEntity> newAssets = await paths[0].getAssetListPaged(
-          page: pageKey,
-          size: _pageSize,
-        );
-
+        final List<MediaAsset> newAssets =
+            paths.skip(pageKey * _pageSize).take(_pageSize).toList();
+        print("assets ${newAssets.length}");
         final isLastPage = newAssets.length < _pageSize;
         if (isLastPage) {
           _pagingController.appendLastPage(newAssets);
@@ -47,36 +54,43 @@ class _ImageGridState extends State<ImageGrid> {
           _pagingController.appendPage(newAssets, nextPageKey);
         }
       }
+      print("after paths");
     } catch (error) {
       _pagingController.error = error;
     }
   }
 
-  Future<Uint8List?> _getThumbnail(AssetEntity asset) async {
-    if (_thumbnailCache.containsKey(asset.id)) {
-      return _thumbnailCache[asset.id];
+  Future<Widget?> _getThumbnail(MediaAsset asset) async {
+    if (_thumbnailCache.containsKey(asset.checksum)) {
+      return _thumbnailCache[asset.checksum];
     }
 
-    final Uint8List? thumbnail = await asset.thumbnailData;
-    _thumbnailCache[asset.id] = thumbnail; 
+    final Widget thumbnail = await asset.getPreview();
+    _thumbnailCache[asset.checksum] = thumbnail;
     return thumbnail;
+
+
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
-    return PagedGridView<int, AssetEntity>(
+    // Show a loading indicator until paths are loaded
+    if (!_isPathsLoaded) {
+      return Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return PagedGridView<int, MediaAsset>(
       pagingController: _pagingController,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         crossAxisSpacing: 2.0,
         mainAxisSpacing: 2.0,
       ),
-      builderDelegate: PagedChildBuilderDelegate<AssetEntity>(
+      builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
         itemBuilder: (context, asset, index) {
-          return FutureBuilder<Uint8List?>(
+          return FutureBuilder<Widget?>(
             future: _getThumbnail(asset),
             builder: (context, snapshot) {
               if (snapshot.hasData) {
@@ -86,7 +100,7 @@ class _ImageGridState extends State<ImageGrid> {
                 );
               } else {
                 return Container(
-                  color: Colors.grey[300], 
+                  color: Colors.grey[300],
                 );
               }
             },

@@ -10,7 +10,7 @@ class RouteGenerator {
       case '/login':
         return MaterialPageRoute(builder: (_) => LoginPage());
     // NOTE: / or /home ?
-      case '/':
+      case '/home':
       // Validation of correct data type
         return MaterialPageRoute(builder: (_) => HomePage());
       default:
