@@ -62,7 +62,7 @@ class ImageGridState2 extends State<ImageGrid2> {
   }
 
   Future<List<MediaAsset>> _fetchAssets(int page) async {
-    final assets = await SyncManager().sync();
+    final assets = await SyncManager().getAssetStructure();
     return assets.skip(page * _pageSize).take(_pageSize).toList();
   }
 
@@ -72,7 +72,7 @@ class ImageGridState2 extends State<ImageGrid2> {
     }
 
     final Widget thumbnail = await asset.getPreview();
-    _thumbnailCache[asset.checksum] = thumbnail;
+    _thumbnailCache[asset.checksum!] = thumbnail;
     return thumbnail;
   }
 

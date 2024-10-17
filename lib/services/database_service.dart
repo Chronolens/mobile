@@ -35,7 +35,7 @@ class DatabaseService {
     return null;
   }
 
-  Future<void> closeIsar() async {
+  Future<void> close() async {
     await database.close();
   }
 }

@@ -6,6 +6,7 @@ publish_to: 'none'
 
 version: 1.0.0+1
 
+isar_version: &isar_version 3.1.8
 environment:
   sdk: ^3.5.3
 
@@ -31,16 +32,23 @@ dependencies:
   google_fonts: ^6.2.1
   http: ^1.2.2
   mime: ^2.0.0
-  isar: ^3.1.0+1
-  isar_flutter_libs: ^3.1.0+1
   path_provider: ^2.1.4
+  isar: 
+    version: *isar_version
+    hosted: https://pub.isar-community.dev/
+  isar_flutter_libs: # contains Isar Core
+    version: *isar_version
+    hosted: https://pub.isar-community.dev/
+
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  isar_generator: ^3.1.0+1
   build_runner: ^2.4.13
+  isar_generator: 
+    version: *isar_version
+    hosted: https://pub.isar-community.dev/
 
 flutter:
   uses-material-design: true
