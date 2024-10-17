@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:mobile/model/login_request.dart';
 import 'package:mobile/model/login_response.dart';
 import 'package:mobile/model/remote_media_asset.dart';
+import 'package:mobile/utils/checksum.dart';
 import 'package:mobile/utils/constants.dart';
 import 'package:mobile/utils/time.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,6 +71,7 @@ class APIServiceClient {
   //     print(response);
   // }
 
+  // TODO: change funtion inputs
   Future<void> uploadFileStream(String filePath) async {
     final SharedPreferencesAsync prefs = SharedPreferencesAsync();
     String baseUrl = await prefs.getString(BASE_URL) ?? "";
@@ -79,8 +80,7 @@ class APIServiceClient {
     final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
 
     final file = File(filePath);
-    final fileStream = file.openRead();
-    final checksum = base64.encode((await sha256.bind(fileStream).first).bytes);
+    final checksum = await computeChecksum(filePath);
     final mimeType = lookupMimeType(filePath) ?? "application/octet-stream";
 
     print("MimeType: $mimeType");
@@ -95,7 +95,7 @@ class APIServiceClient {
         HttpHeaders.authorizationHeader: "Bearer $jwtToken",
         HttpHeaders.contentTypeHeader: mimeType,
         "Timestamp": fileTimeStamp.toString(),
-        'Content-Digest': "sha-256=:$checksum:",
+        'Content-Digest': "sha-1=:$checksum:",
         'Expect': '100-continue'
       });
 
@@ -119,7 +119,7 @@ class APIServiceClient {
     }
   }
 
-  Future<Map<String, RemoteMedia>> syncFullRemote() async {
+  Future<List<RemoteMedia>> syncFullRemote() async {
     final SharedPreferencesAsync prefs = SharedPreferencesAsync();
     String baseUrl = await prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/sync/full');
@@ -133,20 +133,16 @@ class APIServiceClient {
     try {
       var response = await http.get(uri, headers: headers);
       print("Body: ${response.body}");
-      final Map<String, dynamic> sync = jsonDecode(response.body);
+      final List<dynamic> sync = jsonDecode(response.body);
+      final List<RemoteMedia> mediaMap =
+          sync.map((v) => RemoteMedia.fromJson(v)).toList();
 
-      final Map<String, RemoteMedia> mediaMap =
-          sync.map<String, RemoteMedia>((key, value) {
-        //Map of Id -> (hash,created_at)
-        return MapEntry(key, RemoteMedia.fromJson(value, key));
-      });
-      print("Sync $mediaMap");
       print("Finished syncFull()");
 
       return mediaMap;
     } catch (e) {
       print("Exception $e");
-      return <String, RemoteMedia>{};
+      return [];
     }
   }
 
