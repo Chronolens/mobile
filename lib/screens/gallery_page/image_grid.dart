@@ -17,12 +17,15 @@ class ImageGridState extends State<ImageGrid> {
       PagingController(firstPageKey: 0);
 
   final Map<String, Widget?> _thumbnailCache = {};
-  List<MediaAsset> paths = [];
+  List<MediaAsset> assets = [];
+  List<List<int>> assetChunkIndexes = [];
   bool _isPathsLoaded = false; // Add this flag
   final SyncManager syncManager = SyncManager();
 
   Future<void> initSyncManager() async {
-    paths = await syncManager.getAssetStructure();
+    List<MediaAsset> newAssets =  await syncManager.getAssetStructure();
+    assetChunkIndexes = syncManager.splitIntoChunks(newAssets,_pageSize);
+    assets = newAssets;
     setState(() {
       _isPathsLoaded = true; // Update the flag after paths are loaded
     });
@@ -43,16 +46,18 @@ class ImageGridState extends State<ImageGrid> {
   Future<void> _loadAssets(int pageKey) async {
     try {
       print("before paths");
-      if (paths.isNotEmpty) {
+      if (assets.isNotEmpty) {
         final List<MediaAsset> newAssets =
-            paths.skip(pageKey * _pageSize).take(_pageSize).toList();
-        print("assets ${newAssets.length}");
-        final isLastPage = newAssets.length < _pageSize;
+            assets.getRange(assetChunkIndexes[pageKey][0],assetChunkIndexes[pageKey][1]).toList();
+
+        List<MediaAsset> resolvedAssets = await syncManager.resolver(newAssets);
+        print("assets ${resolvedAssets.length}");
+        final isLastPage = resolvedAssets.length < _pageSize;
         if (isLastPage) {
-          _pagingController.appendLastPage(newAssets);
+          _pagingController.appendLastPage(resolvedAssets);
         } else {
           final nextPageKey = pageKey + 1;
-          _pagingController.appendPage(newAssets, nextPageKey);
+          _pagingController.appendPage(resolvedAssets, nextPageKey);
         }
       }
       print("after paths");
@@ -62,17 +67,17 @@ class ImageGridState extends State<ImageGrid> {
   }
 
   Future<Widget?> _getThumbnail(MediaAsset asset) async {
-    if (_thumbnailCache.containsKey(asset.checksum)) {
-      return _thumbnailCache[asset.checksum];
-    }
+    //if (_thumbnailCache.containsKey(asset.checksum)) {
+    //  return _thumbnailCache[asset.checksum];
+    //}
 
     final Widget thumbnail = await asset.getPreview();
-    _thumbnailCache[asset.checksum] = thumbnail;
+    //_thumbnailCache[asset.checksum] = thumbnail;
     return thumbnail;
   }
 
   Future<void> _refreshList() async {
-    paths = await syncManager.getAssetStructure();
+    assets = await syncManager.getAssetStructure();
     _thumbnailCache.clear();
     _pagingController.refresh();
   }

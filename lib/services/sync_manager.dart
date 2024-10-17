@@ -252,7 +252,7 @@ class SyncManager {
         resolvedAssets.add(currentAsset);
       }
     }
-
+    database.close();
     return resolvedAssets;
   }
 
