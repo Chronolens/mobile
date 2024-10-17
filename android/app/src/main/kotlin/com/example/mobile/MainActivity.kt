@@ -4,8 +4,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
-
-
+import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.mobile/images"
@@ -14,13 +13,12 @@ class MainActivity : FlutterActivity() {
         super.onCreate(savedInstanceState)
 
         // Ensure flutterEngine is non-null and the MethodChannel is set up correctly
-        // FIXME binaryMessenger!!
         MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger!!, CHANNEL).setMethodCallHandler { 
             call, result ->
             if (call.method == "getAllImagePathsNative") {
-                // Retrieve image paths and ids
+                // Retrieve image paths, ids, and timestamps
                 val imagePaths = getAllImagePathsNative()
-                // Return the paths and ids to Flutter
+                // Return the paths, ids, and timestamps to Flutter
                 result.success(imagePaths)
             } else {
                 result.notImplemented()
@@ -28,16 +26,18 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    // Function to get all image paths and MediaStore IDs
+    // Function to get all image paths, MediaStore IDs, and timestamps
     private fun getAllImagePathsNative(): List<List<String>> {
         val imagePaths = mutableListOf<List<String>>()
-        // Specify the columns to retrieve: _ID (MediaStore ID) and DATA (file path)
+        // Specify the columns to retrieve: _ID (MediaStore ID), DATA (file path), DATE_TAKEN (timestamp), DATE_MODIFIED (last modified date)
         val projection = arrayOf(
-            MediaStore.Images.Media._ID,    // MediaStore ID
-            MediaStore.Images.Media.DATA    // File path
+            MediaStore.Images.Media._ID,           // MediaStore ID
+            MediaStore.Images.Media.DATA,          // File path
+            MediaStore.Images.Media.DATE_TAKEN,    // Timestamp (date taken)
+            MediaStore.Images.Media.DATE_MODIFIED  // Last modified timestamp
         )
 
-        // Query MediaStore to get image file paths and IDs
+        // Query MediaStore to get image file paths, IDs, and timestamps
         val cursor: Cursor? = contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             projection,
@@ -46,20 +46,39 @@ class MainActivity : FlutterActivity() {
             null
         )
 
-        // Safely use the cursor and retrieve image paths and IDs
+        // Safely use the cursor and retrieve image paths, IDs, and timestamps
         cursor?.use {
             val idColumnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val dataColumnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+            val dateModifiedColumnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
+
+            val dateTakenColumnIndex = it.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN) // Use getColumnIndex which returns -1 if column doesn't exist
             
             while (it.moveToNext()) {
                 val imageId = it.getString(idColumnIndex)        // Get the MediaStore ID
                 val imagePath = it.getString(dataColumnIndex)    // Get the file path
+                val dateTaken = if (dateTakenColumnIndex != -1) it.getLong(dateTakenColumnIndex) else null // Get the DATE_TAKEN value, can be null
 
-                // Add both MediaStore ID and image path to the list
-                imagePaths.add(listOf(imagePath,imageId))
+                // Check if dateTaken is null, if so, fallback to DATE_MODIFIED or file metadata
+                val finalTimestamp = dateTaken ?: getFallbackTimestamp(imagePath, it.getLong(dateModifiedColumnIndex))
+
+                // Add MediaStore ID, file path, and timestamp to the list
+                imagePaths.add(listOf(imagePath, imageId, finalTimestamp.toString()))
             }
         }
 
         return imagePaths
+    }
+
+    // Function to get fallback timestamp using file metadata
+    private fun getFallbackTimestamp(filePath: String, dateModified: Long): Long {
+        val file = File(filePath)
+        
+        return if (file.exists()) {
+            val fileModifiedTime = file.lastModified() // Fallback to the file's last modified time
+            fileModifiedTime.takeIf { it > 0 } ?: dateModified // If valid, use the lastModified time, else fallback to MediaStore's DATE_MODIFIED
+        } else {
+            dateModified // Fallback to MediaStore's DATE_MODIFIED column
+        }
     }
 }

@@ -5,8 +5,6 @@ import 'package:mobile/screens/gallery_page/image_grid.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
-import 'gridview_grid.dart';
-
 class GalleryPage extends StatefulWidget {
   const GalleryPage({super.key});
 
