@@ -23,20 +23,26 @@ class ImageGridState extends State<ImageGrid> {
   final SyncManager syncManager = SyncManager();
 
   Future<void> initSyncManager() async {
-    List<MediaAsset> newAssets =  await syncManager.getAssetStructure();
-    assetChunkIndexes = syncManager.splitIntoChunks(newAssets,_pageSize);
+    List<MediaAsset> newAssets = await syncManager.getAssetStructure();
+    print("before chunks");
+    assetChunkIndexes = syncManager.splitIntoChunks(newAssets, _pageSize);
+    print("after chunks");
     assets = newAssets;
     setState(() {
       _isPathsLoaded = true; // Update the flag after paths are loaded
     });
+    print("after setState()");
   }
 
   @override
   void initState() {
     super.initState();
     initSyncManager().then((_) {
+        print("arrived at pageController");
       _pagingController.addPageRequestListener((pageKey) {
+        print("entered at pageController");
         if (_isPathsLoaded) {
+          print("arrived at loadAssets()");
           _loadAssets(pageKey);
         }
       });
@@ -47,8 +53,10 @@ class ImageGridState extends State<ImageGrid> {
     try {
       print("before paths");
       if (assets.isNotEmpty) {
-        final List<MediaAsset> newAssets =
-            assets.getRange(assetChunkIndexes[pageKey][0],assetChunkIndexes[pageKey][1]).toList();
+        final List<MediaAsset> newAssets = assets
+            .getRange(
+                assetChunkIndexes[pageKey][0], assetChunkIndexes[pageKey][1])
+            .toList();
 
         List<MediaAsset> resolvedAssets = await syncManager.resolver(newAssets);
         print("assets ${resolvedAssets.length}");

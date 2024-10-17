@@ -33,23 +33,6 @@ class SyncManager {
     if (lastSync == null) {
       // DO FULL SYNC
 
-      //Map<String, String> checksumCache = HashMap();
-      //
-      //// Generate hashes
-      //for (var localMedia in local) {
-      //  File file = File(localMedia.path);
-      //  final fileStream = file.openRead();
-      //  String checksum =
-      //      base64.encode((await sha256.bind(fileStream).first).bytes);
-      //  // Add to checksum cache
-      //  checksumCache[localMedia.id] = checksum;
-      //  // Add to local_assets
-      //  localAssets[checksum] = localMedia;
-      //  current.value++;
-      //}
-
-      //await asyncPrefs.setString(CHECKSUM_CACHE, jsonEncode(checksumCache));
-
       // Map of remote id to RemoteMedia
       Map<String, RemoteMedia> remote =
           await APIServiceClient().syncFullRemote();
@@ -61,36 +44,9 @@ class SyncManager {
       for (var remoteMedia in remote.values) {
         assets.add(remoteMedia);
       }
+      print("finish");
     } else {
       // DO PARTIAL SYNC
-
-      //String? checksumCacheJson = await asyncPrefs.getString(CHECKSUM_CACHE);
-      //if (checksumCacheJson != null) {
-      //  // Decode the JSON and cast it properly
-      //  Map<String, dynamic> decodedChecksumCache =
-      //      jsonDecode(checksumCacheJson);
-      //  Map<String, String> checksumCache =
-      //      decodedChecksumCache.cast<String, String>();
-      //
-      //  for (var localMedia in local) {
-      //    String? hashLookup = checksumCache[localMedia.id];
-      //    String checksum;
-      //    if (hashLookup == null) {
-      //      File file = File(localMedia.path);
-      //      final fileStream = file.openRead();
-      //      checksum =
-      //          base64.encode((await sha256.bind(fileStream).first).bytes);
-      //      // Add to hash cache
-      //      checksumCache[localMedia.id] = checksum;
-      //    } else {
-      //      checksum = hashLookup;
-      //    }
-      //    // Add to local_assets
-      //    localAssets[checksum] = localMedia;
-      //  }
-
-      // Store the checksum cache again
-      //await asyncPrefs.setString(CHECKSUM_CACHE, jsonEncode(checksumCache));
 
       // Sync partial remote
       List remote = await APIServiceClient().syncPartialRemote(lastSync);
@@ -131,7 +87,10 @@ class SyncManager {
       }
       //}
     }
+    print("before sort");
     assets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    print("after sort");
+    print("finished getAssetstructure()");
     // Call syncResolver with localAssets and remoteAssets
     return assets;
   }
@@ -167,6 +126,7 @@ class SyncManager {
   Future<List<MediaInfo>> getAllImagePathsNative() async {
     try {
       // Call the method on the platform (Android in this case)
+      print("before native");
       final List<dynamic> paths =
           await platform.invokeMethod('getAllImagePathsNative');
 
@@ -174,10 +134,11 @@ class SyncManager {
       for (var pair in paths) {
         List<String> s =
             (pair as List<dynamic>).map((e) => e.toString()).toList();
-        File file = File(s[0]);
-        localMediaInfo.add(MediaInfo(s[0], await getFileStamp(file), s[1]));
+        //File file = File(s[0]);
+        localMediaInfo.add(MediaInfo(
+            s[0], int.parse(s[2]) /* await getFileStamp(file) */, s[1]));
       }
-
+      print("before native");
       return localMediaInfo;
     } on PlatformException catch (_) {
       return [];
