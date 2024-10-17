@@ -39,7 +39,7 @@ const ChecksumSchema = CollectionSchema(
   getId: _checksumGetId,
   getLinks: _checksumGetLinks,
   attach: _checksumAttach,
-  version: '3.1.0+1',
+  version: '3.1.8',
 );
 
 int _checksumEstimateSize(
