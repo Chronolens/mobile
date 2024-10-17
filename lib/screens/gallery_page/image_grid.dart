@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/model/media_asset.dart';
+import 'package:mobile/services/database_service.dart';
 import 'package:mobile/services/sync_manager.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'preview_container.dart';
@@ -15,54 +16,47 @@ class ImageGridState extends State<ImageGrid> {
   static const _pageSize = 40;
   final PagingController<int, MediaAsset> _pagingController =
       PagingController(firstPageKey: 0);
-
+  late DatabaseService database;
   final Map<String, Widget?> _thumbnailCache = {};
-  late List<MediaAsset> assets = [];
-  List<List<int>> assetChunkIndexes = [];
-  final SyncManager syncManager = SyncManager();
-  bool _isAssetsLoaded = false;
+  List<MediaAsset> assets = [];
+  bool _isAssetsLoaded = false; // Add this flag
 
   Future<void> initSyncManager() async {
-    assets = await syncManager.getAssetStructure();
-    assetChunkIndexes = syncManager.splitIntoChunks(assets, _pageSize);
+    database = await DatabaseService.create();
+    assets = await SyncManager().getAssetStructure(database);
     setState(() {
-      _isAssetsLoaded = true; // Mark assets as loaded
+      _isAssetsLoaded = true; // Update the flag after paths are loaded
     });
   }
 
   @override
   void initState() {
-    // Load assets and only after loading, add the paging listener
+    super.initState();
     initSyncManager().then((_) {
       _pagingController.addPageRequestListener((pageKey) {
-        _loadAssets(pageKey);
+        if (_isAssetsLoaded) {
+          _loadAssets(pageKey);
+        }
       });
     });
-    super.initState();
   }
 
   Future<void> _loadAssets(int pageKey) async {
     try {
-      print("Loading assets");
-      print("Assets Length is ${assets.length}");
+      print("before paths");
       if (assets.isNotEmpty) {
-        final List<MediaAsset> newAssets = assets
-            .getRange(
-                assetChunkIndexes[pageKey][0], assetChunkIndexes[pageKey][1])
-            .toList();
-
-        print("before resolver");
-        List<MediaAsset> resolvedAssets = await syncManager.resolver(newAssets);
-        print("assets ${resolvedAssets.length}");
-        final isLastPage = assets.length - 1 == assetChunkIndexes[pageKey][1];
+        final List<MediaAsset> newAssets =
+            assets.skip(pageKey * _pageSize).take(_pageSize).toList();
+        print("assets ${newAssets.length}");
+        final isLastPage = newAssets.length < _pageSize;
         if (isLastPage) {
-          _pagingController.appendLastPage(resolvedAssets);
+          _pagingController.appendLastPage(newAssets);
         } else {
           final nextPageKey = pageKey + 1;
-          _pagingController.appendPage(resolvedAssets, nextPageKey);
+          _pagingController.appendPage(newAssets, nextPageKey);
         }
       }
-      print("Finished Loading assets");
+      print("after paths");
     } catch (error) {
       _pagingController.error = error;
     }
@@ -79,8 +73,7 @@ class ImageGridState extends State<ImageGrid> {
   }
 
   Future<void> _refreshList() async {
-    assets = await syncManager.getAssetStructure();
-    assetChunkIndexes = syncManager.splitIntoChunks(assets, _pageSize);
+    assets = await SyncManager().getAssetStructure(database);
     _thumbnailCache.clear();
     _pagingController.refresh();
   }
@@ -135,6 +128,7 @@ class ImageGridState extends State<ImageGrid> {
   @override
   void dispose() {
     _pagingController.dispose();
+    database.close();
     super.dispose();
   }
 }

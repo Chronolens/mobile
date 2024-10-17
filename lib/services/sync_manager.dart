@@ -4,47 +4,42 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:isar/isar.dart';
 import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/model/media_info.dart';
 import 'package:mobile/model/remote_media_asset.dart';
 import 'package:mobile/services/api_service.dart';
 import 'package:mobile/services/database_service.dart';
+import 'package:mobile/utils/checksum.dart';
 import 'package:mobile/utils/constants.dart';
-import 'package:mobile/utils/time.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SyncManager {
   //Native Module
   static const platform = MethodChannel('com.example.mobile/images');
 
-  Future<List<MediaAsset>> getAssetStructure() async {
+  Future<List<MediaAsset>> getAssetStructure(DatabaseService database) async {
     final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
     int? lastSync = await asyncPrefs.getInt(LAST_SYNC);
 
     List<MediaAsset> assets = [];
 
-    List<MediaInfo> local = await getAllImagePathsNative();
-    for (var localAsset in local) {
-      assets.add(LocalMedia(
-          null, localAsset.path, localAsset.id, null, localAsset.timestamp));
-    }
+    // List<MediaInfo> local = await getAllImagePathsNative();
+    // for (var localAsset in local) {
+    //   assets.add(LocalMedia(
+    //       null, localAsset.path, localAsset.id, null, localAsset.timestamp));
+    // }
 
     if (lastSync == null) {
       // DO FULL SYNC
 
       // Map of remote id to RemoteMedia
-      Map<String, RemoteMedia> remote =
-          await APIServiceClient().syncFullRemote();
+      List<RemoteMedia> remote = await APIServiceClient().syncFullRemote();
 
       await asyncPrefs.setInt(LAST_SYNC, DateTime.now().millisecondsSinceEpoch);
-
-      await asyncPrefs.setString(REMOTE_ASSETS, jsonEncode(remote));
-
-      for (var remoteMedia in remote.values) {
-        assets.add(remoteMedia);
-      }
-      print("finish");
+      await database.upsertRemoteAssets(remote);
+      assets.addAll(remote);
     } else {
       // DO PARTIAL SYNC
 
@@ -53,45 +48,22 @@ class SyncManager {
       await asyncPrefs.setInt(LAST_SYNC, DateTime.now().millisecondsSinceEpoch);
 
       // Map the uploaded items from the remote sync
-      final Map<String, RemoteMedia> uploadedMap =
-          (remote[0] as Map).map<String, RemoteMedia>((key, value) {
-        return MapEntry(key, RemoteMedia.fromJson(value, key));
-      });
+      final List<RemoteMedia> uploadedList =
+          (remote[0] as List).map((r) => RemoteMedia.fromJson(r)).toList();
 
       // Cast the list of deleted items to List<String>
       List<String> deletedList = (remote[1] as List).cast<String>();
 
-      // Get the remote media from local storage
-      String? savedRemoteMediaJson = await asyncPrefs.getString(REMOTE_ASSETS);
-      Map<String, RemoteMedia> savedRemoteMedia =
-          (jsonDecode(savedRemoteMediaJson!) as Map<String, dynamic>)
-              .map<String, RemoteMedia>((key, value) =>
-                  MapEntry(key, RemoteMedia.fromJson(value, key)));
+      database.upsertRemoteAssets(uploadedList);
+      
+      database.deleteRemoteAssets(deletedList);
 
-      // Add the uploaded items to saved remote media
-      for (var uploadedMedia in uploadedMap.entries) {
-        savedRemoteMedia[uploadedMedia.key] = uploadedMedia.value;
-      }
-
-      // Remove the deleted items from saved remote media
-      for (var deleted in deletedList) {
-        savedRemoteMedia.remove(deleted);
-      }
-
-      // Save the updated remote media to local storage
-      await asyncPrefs.setString(REMOTE_ASSETS, jsonEncode(savedRemoteMedia));
-
-      // Update remoteAssets with the checksums
-      for (var remoteMedia in savedRemoteMedia.values) {
-        assets.add(remoteMedia);
-      }
-      //}
+      assets.addAll(await database.getRemoteAssets());
+      print("after addAdll $assets");
     }
-    print("before sort");
     assets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    print("after sort");
-    print("finished getAssetstructure()");
-    // Call syncResolver with localAssets and remoteAssets
+
+
     return assets;
   }
 
@@ -134,9 +106,7 @@ class SyncManager {
       for (var pair in paths) {
         List<String> s =
             (pair as List<dynamic>).map((e) => e.toString()).toList();
-        //File file = File(s[0]);
-        localMediaInfo.add(MediaInfo(
-            s[0], int.parse(s[2]) /* await getFileStamp(file) */, s[1]));
+        localMediaInfo.add(MediaInfo(s[0], int.parse(s[2]), s[1]));
       }
       print("before native");
       return localMediaInfo;
@@ -145,23 +115,7 @@ class SyncManager {
     }
   }
 
-  Future<String> computeChecksum(String path) async {
-    File file = File(path);
-    final fileStream = file.openRead();
-    return base64.encode((await sha256.bind(fileStream).first).bytes);
-  }
-
-  Future<String?> getOrComputeChecksum(
-      String id, String path, DatabaseService database) async {
-    String? checksum = await database.checkChecksumInDatabase(id);
-
-    if (checksum == null) {
-      checksum = await computeChecksum(path);
-      await database.storeChecksumInDatabase(id, checksum);
-    }
-    return checksum;
-  }
-
+  // FIXME: resolver should receive databaseService as input
   Future<List<MediaAsset>> resolver(List<MediaAsset> chunk) async {
     DatabaseService database = await DatabaseService.create();
     List<MediaAsset> resolvedAssets = [];
@@ -213,7 +167,7 @@ class SyncManager {
         resolvedAssets.add(currentAsset);
       }
     }
-    database.close();
+    // database.close()
     return resolvedAssets;
   }
 
@@ -246,6 +200,4 @@ class SyncManager {
     print("DONE");
     return mediaAssets;
   }
-
-  void insertAssets(List<MediaAsset> current, List<LocalMedia> local) {}
 }
