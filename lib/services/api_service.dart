@@ -139,6 +139,8 @@ class APIServiceClient {
 
       print("Finished syncFull()");
 
+      int since = int.parse(response.headers['since']!);
+      await prefs.setInt(LAST_SYNC, since);
       return mediaMap;
     } catch (e) {
       print("Exception $e");
@@ -162,6 +164,9 @@ class APIServiceClient {
       var response = await http.get(uri, headers: headers);
       print("Body: ${response.body}");
       final Map<String, dynamic> sync = jsonDecode(response.body);
+
+      int since = int.parse(response.headers['since']!);
+      await prefs.setInt(LAST_SYNC, since);
 
       return [sync["uploaded"], sync["deleted"]];
     } catch (e) {

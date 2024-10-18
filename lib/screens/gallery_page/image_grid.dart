@@ -1,5 +1,10 @@
+import 'dart:isolate';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/media_asset.dart';
+import 'package:mobile/model/remote_media_asset.dart';
 import 'package:mobile/services/database_service.dart';
 import 'package:mobile/services/sync_manager.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
@@ -18,12 +23,21 @@ class ImageGridState extends State<ImageGrid> {
       PagingController(firstPageKey: 0);
   late DatabaseService database;
   final Map<String, Widget?> _thumbnailCache = {};
-  List<MediaAsset> assets = [];
+
+  List<MediaAsset> allAssets = [];
+
+  List<RemoteMedia> remoteAssets = [];
+
+  List<LocalMedia> localAssets = [];
   bool _isAssetsLoaded = false; // Add this flag
+
+  Isolate? _localMediaIsolate;
+  ReceivePort? _receivePort;
 
   Future<void> initSyncManager() async {
     database = await DatabaseService.create();
-    assets = await SyncManager().getAssetStructure(database);
+    remoteAssets = await SyncManager().getAssetStructure(database);
+    mergeMediaAssets();
     setState(() {
       _isAssetsLoaded = true; // Update the flag after paths are loaded
     });
@@ -39,15 +53,19 @@ class ImageGridState extends State<ImageGrid> {
         }
       });
     });
+    _startLoadingLocalAssets();
+  }
+
+  void mergeMediaAssets() {
+    allAssets = SyncManager().mergeAssets(localAssets, remoteAssets);
+    _pagingController.refresh();
   }
 
   Future<void> _loadAssets(int pageKey) async {
     try {
-      print("before paths");
-      if (assets.isNotEmpty) {
+      if (allAssets.isNotEmpty) {
         final List<MediaAsset> newAssets =
-            assets.skip(pageKey * _pageSize).take(_pageSize).toList();
-        print("assets ${newAssets.length}");
+            allAssets.skip(pageKey * _pageSize).take(_pageSize).toList();
         final isLastPage = newAssets.length < _pageSize;
         if (isLastPage) {
           _pagingController.appendLastPage(newAssets);
@@ -56,7 +74,6 @@ class ImageGridState extends State<ImageGrid> {
           _pagingController.appendPage(newAssets, nextPageKey);
         }
       }
-      print("after paths");
     } catch (error) {
       _pagingController.error = error;
     }
@@ -73,9 +90,49 @@ class ImageGridState extends State<ImageGrid> {
   }
 
   Future<void> _refreshList() async {
-    assets = await SyncManager().getAssetStructure(database);
+    localAssets = [];
+    remoteAssets = [];
+    allAssets = [];
+    remoteAssets = await SyncManager().getAssetStructure(database);
+    _startLoadingLocalAssets();
+    mergeMediaAssets();
     _thumbnailCache.clear();
     _pagingController.refresh();
+  }
+
+  void _startLoadingLocalAssets() async {
+    // Clean up any existing isolate before starting a new one
+    _stopLocalMediaIsolate();
+
+    _receivePort = ReceivePort();
+
+    // Identify the root isolate to pass to the background isolate.
+    RootIsolateToken rootIsolateToken = RootIsolateToken.instance!;
+    // Spawn the isolate and pass the SendPort for communication
+    _localMediaIsolate = await Isolate.spawn(
+      backgroundMediaLoader,
+      [_receivePort!.sendPort, rootIsolateToken],
+    );
+
+    // Listen to messages from the isolate
+    _receivePort!.listen((message) {
+      if (message is List<LocalMedia>) {
+        // Update the localAssets with the list received from the isolate
+        localAssets += List.from(message);
+        mergeMediaAssets();
+      } else if (message == "done") {
+        print("Local media loading completed.");
+      }
+    });
+  }
+
+  void _stopLocalMediaIsolate() {
+    if (_localMediaIsolate != null) {
+      _localMediaIsolate!.kill(priority: Isolate.immediate);
+      _receivePort?.close(); // Close the port
+      _localMediaIsolate = null;
+      _receivePort = null;
+    }
   }
 
   @override
@@ -128,6 +185,7 @@ class ImageGridState extends State<ImageGrid> {
   @override
   void dispose() {
     _pagingController.dispose();
+    _stopLocalMediaIsolate();
     database.close();
     super.dispose();
   }

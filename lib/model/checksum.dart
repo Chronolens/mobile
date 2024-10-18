@@ -6,6 +6,7 @@ part 'checksum.g.dart';
 class Checksum {
   Id id = Isar.autoIncrement;
 
+  @Index(unique: true, replace: true)
   late String localId;
   late String checksum;
 }

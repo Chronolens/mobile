@@ -38,7 +38,21 @@ const RemoteAssetDbSchema = CollectionSchema(
   deserialize: _remoteAssetDbDeserialize,
   deserializeProp: _remoteAssetDbDeserializeProp,
   idName: r'id',
-  indexes: {},
+  indexes: {
+    r'remoteId': IndexSchema(
+      id: 6301175856541681032,
+      name: r'remoteId',
+      unique: true,
+      replace: true,
+      properties: [
+        IndexPropertySchema(
+          name: r'remoteId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
   links: {},
   embeddedSchemas: {},
   getId: _remoteAssetDbGetId,
@@ -112,6 +126,61 @@ List<IsarLinkBase<dynamic>> _remoteAssetDbGetLinks(RemoteAssetDb object) {
 void _remoteAssetDbAttach(
     IsarCollection<dynamic> col, Id id, RemoteAssetDb object) {
   object.id = id;
+}
+
+extension RemoteAssetDbByIndex on IsarCollection<RemoteAssetDb> {
+  Future<RemoteAssetDb?> getByRemoteId(String remoteId) {
+    return getByIndex(r'remoteId', [remoteId]);
+  }
+
+  RemoteAssetDb? getByRemoteIdSync(String remoteId) {
+    return getByIndexSync(r'remoteId', [remoteId]);
+  }
+
+  Future<bool> deleteByRemoteId(String remoteId) {
+    return deleteByIndex(r'remoteId', [remoteId]);
+  }
+
+  bool deleteByRemoteIdSync(String remoteId) {
+    return deleteByIndexSync(r'remoteId', [remoteId]);
+  }
+
+  Future<List<RemoteAssetDb?>> getAllByRemoteId(List<String> remoteIdValues) {
+    final values = remoteIdValues.map((e) => [e]).toList();
+    return getAllByIndex(r'remoteId', values);
+  }
+
+  List<RemoteAssetDb?> getAllByRemoteIdSync(List<String> remoteIdValues) {
+    final values = remoteIdValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'remoteId', values);
+  }
+
+  Future<int> deleteAllByRemoteId(List<String> remoteIdValues) {
+    final values = remoteIdValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'remoteId', values);
+  }
+
+  int deleteAllByRemoteIdSync(List<String> remoteIdValues) {
+    final values = remoteIdValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'remoteId', values);
+  }
+
+  Future<Id> putByRemoteId(RemoteAssetDb object) {
+    return putByIndex(r'remoteId', object);
+  }
+
+  Id putByRemoteIdSync(RemoteAssetDb object, {bool saveLinks = true}) {
+    return putByIndexSync(r'remoteId', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByRemoteId(List<RemoteAssetDb> objects) {
+    return putAllByIndex(r'remoteId', objects);
+  }
+
+  List<Id> putAllByRemoteIdSync(List<RemoteAssetDb> objects,
+      {bool saveLinks = true}) {
+    return putAllByIndexSync(r'remoteId', objects, saveLinks: saveLinks);
+  }
 }
 
 extension RemoteAssetDbQueryWhereSort
@@ -191,6 +260,51 @@ extension RemoteAssetDbQueryWhere
         upper: upperId,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<RemoteAssetDb, RemoteAssetDb, QAfterWhereClause> remoteIdEqualTo(
+      String remoteId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'remoteId',
+        value: [remoteId],
+      ));
+    });
+  }
+
+  QueryBuilder<RemoteAssetDb, RemoteAssetDb, QAfterWhereClause>
+      remoteIdNotEqualTo(String remoteId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'remoteId',
+              lower: [],
+              upper: [remoteId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'remoteId',
+              lower: [remoteId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'remoteId',
+              lower: [remoteId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'remoteId',
+              lower: [],
+              upper: [remoteId],
+              includeUpper: false,
+            ));
+      }
     });
   }
 }
