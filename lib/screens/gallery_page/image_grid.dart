@@ -24,11 +24,10 @@ class ImageGridState extends State<ImageGrid> {
   late DatabaseService database;
   final Map<String, Widget?> _thumbnailCache = {};
 
-  List<MediaAsset> allAssets = [];
-
+  ValueNotifier<List<MediaAsset>> allAssets = ValueNotifier([]);
   List<RemoteMedia> remoteAssets = [];
-
   List<LocalMedia> localAssets = [];
+
   bool _isAssetsLoaded = false; // Add this flag
 
   Isolate? _localMediaIsolate;
@@ -46,6 +45,7 @@ class ImageGridState extends State<ImageGrid> {
   @override
   void initState() {
     super.initState();
+    _startLoadingLocalAssets();
     initSyncManager().then((_) {
       _pagingController.addPageRequestListener((pageKey) {
         if (_isAssetsLoaded) {
@@ -53,19 +53,19 @@ class ImageGridState extends State<ImageGrid> {
         }
       });
     });
-    _startLoadingLocalAssets();
+
+    allAssets.addListener(() => _pagingController.refresh());
   }
 
   void mergeMediaAssets() {
-    allAssets = SyncManager().mergeAssets(localAssets, remoteAssets);
-    _pagingController.refresh();
+    allAssets.value = SyncManager().mergeAssets(localAssets, remoteAssets);
   }
 
   Future<void> _loadAssets(int pageKey) async {
     try {
-      if (allAssets.isNotEmpty) {
+      if (allAssets.value.isNotEmpty) {
         final List<MediaAsset> newAssets =
-            allAssets.skip(pageKey * _pageSize).take(_pageSize).toList();
+            allAssets.value.skip(pageKey * _pageSize).take(_pageSize).toList();
         final isLastPage = newAssets.length < _pageSize;
         if (isLastPage) {
           _pagingController.appendLastPage(newAssets);
@@ -80,24 +80,19 @@ class ImageGridState extends State<ImageGrid> {
   }
 
   Future<Widget?> _getThumbnail(MediaAsset asset) async {
-    if (_thumbnailCache.containsKey(asset.checksum)) {
-      return _thumbnailCache[asset.checksum];
-    }
+    //if (_thumbnailCache.containsKey(asset.checksum)) {
+    //  return _thumbnailCache[asset.checksum];
+    //}
 
     final Widget thumbnail = await asset.getPreview();
-    _thumbnailCache[asset.checksum!] = thumbnail;
+    //_thumbnailCache[asset.checksum!] = thumbnail;
     return thumbnail;
   }
 
   Future<void> _refreshList() async {
-    localAssets = [];
-    remoteAssets = [];
-    allAssets = [];
     remoteAssets = await SyncManager().getAssetStructure(database);
     _startLoadingLocalAssets();
-    mergeMediaAssets();
-    _thumbnailCache.clear();
-    _pagingController.refresh();
+    //_thumbnailCache.clear();
   }
 
   void _startLoadingLocalAssets() async {
@@ -114,11 +109,12 @@ class ImageGridState extends State<ImageGrid> {
       [_receivePort!.sendPort, rootIsolateToken],
     );
 
+    localAssets = [];
     // Listen to messages from the isolate
     _receivePort!.listen((message) {
       if (message is List<LocalMedia>) {
         // Update the localAssets with the list received from the isolate
-        localAssets += List.from(message);
+        localAssets += message;
         mergeMediaAssets();
       } else if (message == "done") {
         print("Local media loading completed.");
