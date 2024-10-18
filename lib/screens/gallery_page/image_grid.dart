@@ -24,7 +24,8 @@ class ImageGridState extends State<ImageGrid> {
   late DatabaseService database;
   final Map<String, Widget?> _thumbnailCache = {};
 
-  ValueNotifier<List<MediaAsset>> allAssets = ValueNotifier([]);
+  //ValueNotifier<List<MediaAsset>> allAssets = ValueNotifier([]);
+  List<MediaAsset> allAssets = [];
   List<RemoteMedia> remoteAssets = [];
   List<LocalMedia> localAssets = [];
 
@@ -54,18 +55,21 @@ class ImageGridState extends State<ImageGrid> {
       });
     });
 
-    allAssets.addListener(() => _pagingController.refresh());
+    // allAssets.addListener(() => print("triggered"));
   }
 
   void mergeMediaAssets() {
-    allAssets.value = SyncManager().mergeAssets(localAssets, remoteAssets);
+    // setState(() {
+    allAssets = SyncManager().mergeAssets(localAssets, remoteAssets);
+    // });
+    _pagingController.refresh();
   }
 
   Future<void> _loadAssets(int pageKey) async {
     try {
-      if (allAssets.value.isNotEmpty) {
+      if (allAssets.isNotEmpty) {
         final List<MediaAsset> newAssets =
-            allAssets.value.skip(pageKey * _pageSize).take(_pageSize).toList();
+            allAssets.skip(pageKey * _pageSize).take(_pageSize).toList();
         final isLastPage = newAssets.length < _pageSize;
         if (isLastPage) {
           _pagingController.appendLastPage(newAssets);
@@ -120,6 +124,7 @@ class ImageGridState extends State<ImageGrid> {
         print("Local media loading completed.");
       }
     });
+    _pagingController.refresh();
   }
 
   void _stopLocalMediaIsolate() {

@@ -1,11 +1,6 @@
 import 'dart:collection';
-import 'dart:convert';
-import 'dart:io';
 import 'dart:isolate';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-import 'package:isar/isar.dart';
 import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/model/media_info.dart';
@@ -14,7 +9,6 @@ import 'package:mobile/services/api_service.dart';
 import 'package:mobile/services/database_service.dart';
 import 'package:mobile/utils/checksum.dart';
 import 'package:mobile/utils/constants.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SyncManager {
@@ -44,11 +38,10 @@ class SyncManager {
 
       List<String> deletedList = (remote[1] as List).cast<String>();
 
-      database.upsertRemoteAssets(uploadedList);
-      database.deleteRemoteAssets(deletedList);
+      await database.upsertRemoteAssets(uploadedList);
+      await database.deleteRemoteAssets(deletedList);
 
       assets.addAll(await database.getRemoteAssets());
-      print("after addAdll $assets");
     }
     assets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
@@ -66,7 +59,7 @@ class SyncManager {
       for (var pair in paths) {
         List<String> s =
             (pair as List<dynamic>).map((e) => e.toString()).toList();
-        localMediaInfo.add(MediaInfo(s[0], int.parse(s[2]), s[1]));
+        localMediaInfo.insert(0, MediaInfo(s[0], int.parse(s[2]), s[1]));
       }
       print("before native");
       return localMediaInfo;
