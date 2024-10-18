@@ -68,9 +68,8 @@ class SyncManager {
     }
   }
 
-  List<MediaAsset> mergeAssets(
-      List<LocalMedia> local, List<RemoteMedia> remote) {
-    List<MediaAsset> mediaAssets = [];
+  void mergeAssets(List<MediaAsset> mediaAssets, List<LocalMedia> local,
+      List<RemoteMedia> remote) {
     Map<String, RemoteMedia> remoteMediaMap = {
       for (var r in remote) r.checksum!: r
     };
@@ -78,33 +77,63 @@ class SyncManager {
     // A set to track checksums that have both local and remote counterparts
     HashSet<String> localAndRemoteHashes = HashSet();
 
+    // Create a list to track media assets to add
+    List<MediaAsset> newMediaAssets = [];
+
     // Process local media and check if there's a remote counterpart
     for (var localMedia in local) {
       var remoteMedia = remoteMediaMap[localMedia.checksum];
 
       if (remoteMedia != null) {
         // Local media has a corresponding remote media
-        mediaAssets.add(LocalMedia(remoteMedia.id, localMedia.path,
-            localMedia.id, localMedia.checksum, localMedia.timestamp));
+        newMediaAssets.add(LocalMedia(
+          remoteMedia.id,
+          localMedia.path,
+          localMedia.id,
+          localMedia.checksum,
+          localMedia.timestamp,
+        ));
         localAndRemoteHashes.add(localMedia.checksum!);
       } else {
         // Local media exists only locally
-        mediaAssets.add(LocalMedia(null, localMedia.path, localMedia.id,
-            localMedia.checksum, localMedia.timestamp));
+        newMediaAssets.add(LocalMedia(
+          null,
+          localMedia.path,
+          localMedia.id,
+          localMedia.checksum,
+          localMedia.timestamp,
+        ));
       }
     }
 
     // Add remote media that doesn't have a local counterpart
     for (var remoteMedia in remote) {
       if (!localAndRemoteHashes.contains(remoteMedia.checksum)) {
-        mediaAssets.add(remoteMedia);
+        newMediaAssets.add(remoteMedia);
       }
     }
 
+    // Merge new items into mediaAssets in place
+    // Keep track of the checksums in the existing list for efficient updates
+    final existingChecksums = mediaAssets.map((e) => e.checksum).toSet();
+
+    // Update existing items and add new items
+    for (var asset in newMediaAssets) {
+      if (existingChecksums.contains(asset.checksum)) {
+        // Update existing asset (could implement more specific logic here if needed)
+        int index = mediaAssets.indexWhere((e) => e.checksum == asset.checksum);
+        mediaAssets[index] = asset; // Update in place
+      } else {
+        // Add new asset
+        mediaAssets.add(asset);
+      }
+    }
+
+    // Optionally, remove items that are no longer present in newMediaAssets
+    mediaAssets.removeWhere((asset) => !newMediaAssets.contains(asset));
+
     // Sort the mediaAssets by timestamp, descending
     mediaAssets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-    return mediaAssets;
   }
 }
 

@@ -7,7 +7,6 @@ import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/model/remote_media_asset.dart';
 import 'package:mobile/services/database_service.dart';
 import 'package:mobile/services/sync_manager.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'preview_container.dart';
 
 class ImageGrid extends StatefulWidget {
@@ -17,19 +16,22 @@ class ImageGrid extends StatefulWidget {
   ImageGridState createState() => ImageGridState();
 }
 
-class ImageGridState extends State<ImageGrid> {
-  static const _pageSize = 40;
-  final PagingController<int, MediaAsset> _pagingController =
-      PagingController(firstPageKey: 0);
+class ImageGridState extends State<ImageGrid>
+    with AutomaticKeepAliveClientMixin<ImageGrid> {
+  static const _pageSize = 64;
   late DatabaseService database;
   final Map<String, Widget?> _thumbnailCache = {};
 
-  //ValueNotifier<List<MediaAsset>> allAssets = ValueNotifier([]);
-  List<MediaAsset> allAssets = [];
+  @override
+  bool get wantKeepAlive => true;
+
+  List<MediaAsset> allAssets = []; // All assets in the database
+  List<MediaAsset> displayedAssets = []; // Paginated assets to be displayed
   List<RemoteMedia> remoteAssets = [];
   List<LocalMedia> localAssets = [];
 
-  bool _isAssetsLoaded = false; // Add this flag
+  bool _isAssetsLoaded = false; // Flag to check if assets are loaded
+  bool _isLoadingMore = false; // Flag to manage loading state for more assets
 
   Isolate? _localMediaIsolate;
   ReceivePort? _receivePort;
@@ -47,84 +49,71 @@ class ImageGridState extends State<ImageGrid> {
   void initState() {
     super.initState();
     _startLoadingLocalAssets();
-    initSyncManager().then((_) {
-      _pagingController.addPageRequestListener((pageKey) {
-        if (_isAssetsLoaded) {
-          _loadAssets(pageKey);
-        }
-      });
-    });
-
-    // allAssets.addListener(() => print("triggered"));
+    initSyncManager();
   }
 
   void mergeMediaAssets() {
-    // setState(() {
-    allAssets = SyncManager().mergeAssets(localAssets, remoteAssets);
-    // });
-    _pagingController.refresh();
+    SyncManager().mergeAssets(allAssets, localAssets, remoteAssets);
+    // Load the initial page of assets
+    loadMoreAssets();
   }
 
-  Future<void> _loadAssets(int pageKey) async {
+  Future<void> loadMoreAssets() async {
+    if (_isLoadingMore || displayedAssets.length >= allAssets.length) return;
+
+    _isLoadingMore = true; // Set loading flag
     try {
-      if (allAssets.isNotEmpty) {
-        final List<MediaAsset> newAssets =
-            allAssets.skip(pageKey * _pageSize).take(_pageSize).toList();
-        final isLastPage = newAssets.length < _pageSize;
-        if (isLastPage) {
-          _pagingController.appendLastPage(newAssets);
-        } else {
-          final nextPageKey = pageKey + 1;
-          _pagingController.appendPage(newAssets, nextPageKey);
-        }
-      }
+      // Calculate the next batch of assets to load
+      final start = displayedAssets.length;
+      final end = (start + _pageSize > allAssets.length)
+          ? allAssets.length
+          : start + _pageSize;
+
+      final newAssets = allAssets.sublist(start, end);
+      setState(() {
+        displayedAssets.addAll(newAssets); // Add new assets to displayedAssets
+      });
     } catch (error) {
-      _pagingController.error = error;
+      // Handle any errors
+      print("Error loading more assets: $error");
+    } finally {
+      _isLoadingMore = false; // Reset loading flag
     }
   }
 
   Future<Widget?> _getThumbnail(MediaAsset asset) async {
-    //if (_thumbnailCache.containsKey(asset.checksum)) {
-    //  return _thumbnailCache[asset.checksum];
-    //}
-
+    if (_thumbnailCache.containsKey(asset.checksum!)) {
+      return _thumbnailCache[asset.checksum!];
+    }
     final Widget thumbnail = await asset.getPreview();
-    //_thumbnailCache[asset.checksum!] = thumbnail;
+    _thumbnailCache[asset.checksum!] = thumbnail;
     return thumbnail;
   }
 
   Future<void> _refreshList() async {
     remoteAssets = await SyncManager().getAssetStructure(database);
     _startLoadingLocalAssets();
-    //_thumbnailCache.clear();
   }
 
   void _startLoadingLocalAssets() async {
-    // Clean up any existing isolate before starting a new one
     _stopLocalMediaIsolate();
 
     _receivePort = ReceivePort();
-
-    // Identify the root isolate to pass to the background isolate.
     RootIsolateToken rootIsolateToken = RootIsolateToken.instance!;
-    // Spawn the isolate and pass the SendPort for communication
     _localMediaIsolate = await Isolate.spawn(
       backgroundMediaLoader,
       [_receivePort!.sendPort, rootIsolateToken],
     );
 
     localAssets = [];
-    // Listen to messages from the isolate
     _receivePort!.listen((message) {
       if (message is List<LocalMedia>) {
-        // Update the localAssets with the list received from the isolate
         localAssets += message;
-        mergeMediaAssets();
+        mergeMediaAssets(); // Merge and load more assets when local assets are loaded
       } else if (message == "done") {
         print("Local media loading completed.");
       }
     });
-    _pagingController.refresh();
   }
 
   void _stopLocalMediaIsolate() {
@@ -138,54 +127,67 @@ class ImageGridState extends State<ImageGrid> {
 
   @override
   Widget build(BuildContext context) {
-    // Show a loading indicator until paths are loaded
+    super.build(context);
     return _isAssetsLoaded // Only display grid if assets are loaded
         ? RefreshIndicator(
             onRefresh: _refreshList,
-            child: PagedGridView<int, MediaAsset>(
-              pagingController: _pagingController,
+            child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,
                 crossAxisSpacing: 2.0,
                 mainAxisSpacing: 2.0,
               ),
-              builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
-                itemBuilder: (context, asset, index) {
-                  return FutureBuilder<Widget?>(
-                    future: _getThumbnail(asset),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return PreviewContainer(
-                          asset: asset,
-                          thumbnail: snapshot.data,
-                        );
-                      } else {
-                        return Container(
-                          color: Colors.grey[300],
-                        );
-                      }
-                    },
-                  );
-                },
-                firstPageErrorIndicatorBuilder: (context) => Center(
-                  child: Text('Failed to load images'),
-                ),
-                newPageErrorIndicatorBuilder: (context) => Center(
-                  child: Text('Failed to load more images'),
-                ),
-                noItemsFoundIndicatorBuilder: (context) => Center(
-                  child: Text('No images found'),
-                ),
-              ),
-            ))
+              itemCount: displayedAssets.length +
+                  (_isLoadingMore ? 1 : 0), // Add one for loading indicator
+              itemBuilder: (context, index) {
+                if (index >= displayedAssets.length) {
+                  // Show loading indicator at the bottom if loading more assets
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                MediaAsset asset = displayedAssets[index];
+                return _buildAssetThumbnail(asset);
+              },
+              // Load more assets when reaching the end of the grid
+              physics: const AlwaysScrollableScrollPhysics(),
+              scrollDirection: Axis.vertical,
+              shrinkWrap: true,
+              primary: true,
+            ),
+          )
         : Center(
             child:
                 CircularProgressIndicator()); // Loading indicator before assets are loaded
   }
 
+  Widget _buildAssetThumbnail(MediaAsset asset) {
+    return FutureBuilder<Widget?>(
+      future: _getThumbnail(asset),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasData) {
+            return PreviewContainer(
+              asset: asset,
+              thumbnail: snapshot.data,
+            );
+          } else {
+            return Container(
+              color: Colors.grey[300],
+              child: Center(child: Icon(Icons.error)),
+            );
+          }
+        } else {
+          return Container(
+            color: Colors.grey[300],
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+      },
+    );
+  }
+
   @override
   void dispose() {
-    _pagingController.dispose();
     _stopLocalMediaIsolate();
     database.close();
     super.dispose();
