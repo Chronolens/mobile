@@ -33,7 +33,21 @@ const ChecksumSchema = CollectionSchema(
   deserialize: _checksumDeserialize,
   deserializeProp: _checksumDeserializeProp,
   idName: r'id',
-  indexes: {},
+  indexes: {
+    r'localId': IndexSchema(
+      id: 1199848425898359622,
+      name: r'localId',
+      unique: true,
+      replace: true,
+      properties: [
+        IndexPropertySchema(
+          name: r'localId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
   links: {},
   embeddedSchemas: {},
   getId: _checksumGetId,
@@ -102,6 +116,61 @@ List<IsarLinkBase<dynamic>> _checksumGetLinks(Checksum object) {
 
 void _checksumAttach(IsarCollection<dynamic> col, Id id, Checksum object) {
   object.id = id;
+}
+
+extension ChecksumByIndex on IsarCollection<Checksum> {
+  Future<Checksum?> getByLocalId(String localId) {
+    return getByIndex(r'localId', [localId]);
+  }
+
+  Checksum? getByLocalIdSync(String localId) {
+    return getByIndexSync(r'localId', [localId]);
+  }
+
+  Future<bool> deleteByLocalId(String localId) {
+    return deleteByIndex(r'localId', [localId]);
+  }
+
+  bool deleteByLocalIdSync(String localId) {
+    return deleteByIndexSync(r'localId', [localId]);
+  }
+
+  Future<List<Checksum?>> getAllByLocalId(List<String> localIdValues) {
+    final values = localIdValues.map((e) => [e]).toList();
+    return getAllByIndex(r'localId', values);
+  }
+
+  List<Checksum?> getAllByLocalIdSync(List<String> localIdValues) {
+    final values = localIdValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'localId', values);
+  }
+
+  Future<int> deleteAllByLocalId(List<String> localIdValues) {
+    final values = localIdValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'localId', values);
+  }
+
+  int deleteAllByLocalIdSync(List<String> localIdValues) {
+    final values = localIdValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'localId', values);
+  }
+
+  Future<Id> putByLocalId(Checksum object) {
+    return putByIndex(r'localId', object);
+  }
+
+  Id putByLocalIdSync(Checksum object, {bool saveLinks = true}) {
+    return putByIndexSync(r'localId', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByLocalId(List<Checksum> objects) {
+    return putAllByIndex(r'localId', objects);
+  }
+
+  List<Id> putAllByLocalIdSync(List<Checksum> objects,
+      {bool saveLinks = true}) {
+    return putAllByIndexSync(r'localId', objects, saveLinks: saveLinks);
+  }
 }
 
 extension ChecksumQueryWhereSort on QueryBuilder<Checksum, Checksum, QWhere> {
@@ -175,6 +244,51 @@ extension ChecksumQueryWhere on QueryBuilder<Checksum, Checksum, QWhereClause> {
         upper: upperId,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<Checksum, Checksum, QAfterWhereClause> localIdEqualTo(
+      String localId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'localId',
+        value: [localId],
+      ));
+    });
+  }
+
+  QueryBuilder<Checksum, Checksum, QAfterWhereClause> localIdNotEqualTo(
+      String localId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'localId',
+              lower: [],
+              upper: [localId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'localId',
+              lower: [localId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'localId',
+              lower: [localId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'localId',
+              lower: [],
+              upper: [localId],
+              includeUpper: false,
+            ));
+      }
     });
   }
 }

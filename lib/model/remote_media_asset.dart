@@ -18,23 +18,17 @@ class RemoteMedia extends MediaAsset {
   @override
   Future<Widget> getPreview() async {
     String imgUrl = await APIServiceClient().getPreview(id);
-    final thumbnail = CachedNetworkImage(
-      imageUrl: imgUrl,
-      imageBuilder: (context, imageProvider) => Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: imageProvider,
-            fit: BoxFit.cover,
-          ),
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-      ),
-      placeholder: (context, url) => CircularProgressIndicator(),
-      errorWidget: (context, url, error) => Icon(Icons.error),
-    );
     return Stack(
       children: [
-        thumbnail,
+        Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: Image.network(imgUrl).image,
+              fit: BoxFit.cover,
+            ),
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+        ),
         Positioned(
           top: 8.0,
           right: 8.0,
