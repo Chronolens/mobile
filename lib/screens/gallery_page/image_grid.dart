@@ -22,9 +22,8 @@ class ImageGridState extends State<ImageGrid> {
   final PagingController<int, MediaAsset> _pagingController =
       PagingController(firstPageKey: 0);
   late DatabaseService database;
-  final Map<String, Widget?> _thumbnailCache = {};
+  final Map<String, MediaAsset> _assetCache = {};
 
-  //ValueNotifier<List<MediaAsset>> allAssets = ValueNotifier([]);
   List<MediaAsset> allAssets = [];
   List<RemoteMedia> remoteAssets = [];
   List<LocalMedia> localAssets = [];
@@ -54,14 +53,10 @@ class ImageGridState extends State<ImageGrid> {
         }
       });
     });
-
-    // allAssets.addListener(() => print("triggered"));
   }
 
   void mergeMediaAssets() {
-    // setState(() {
     allAssets = SyncManager().mergeAssets(localAssets, remoteAssets);
-    // });
     _pagingController.refresh();
   }
 
@@ -84,19 +79,24 @@ class ImageGridState extends State<ImageGrid> {
   }
 
   Future<Widget?> _getThumbnail(MediaAsset asset) async {
-    //if (_thumbnailCache.containsKey(asset.checksum)) {
-    //  return _thumbnailCache[asset.checksum];
-    //}
+    MediaAsset? cachedAsset = _assetCache[asset.checksum];
 
-    final Widget thumbnail = await asset.getPreview();
-    //_thumbnailCache[asset.checksum!] = thumbnail;
-    return thumbnail;
+    if (cachedAsset != null) {
+      if (asset.eq(cachedAsset)) {
+        return cachedAsset.getPreview();
+      } else {
+        return asset.getPreview();
+      }
+    } else {
+      _assetCache[asset.checksum!] = asset;
+      return asset.getPreview();
+    }
   }
 
   Future<void> _refreshList() async {
+    _assetCache.clear();
     remoteAssets = await SyncManager().getAssetStructure(database);
     _startLoadingLocalAssets();
-    //_thumbnailCache.clear();
   }
 
   void _startLoadingLocalAssets() async {

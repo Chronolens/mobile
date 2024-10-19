@@ -7,4 +7,5 @@ abstract class MediaAsset {
   MediaAsset(this.checksum, this.timestamp);
 
   Future<Widget> getPreview();
+  bool eq(MediaAsset other);
 }

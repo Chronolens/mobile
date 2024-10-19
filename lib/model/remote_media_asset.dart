@@ -16,6 +16,15 @@ class RemoteMedia extends MediaAsset {
   }
 
   @override
+  bool eq(MediaAsset other) {
+    if (other is! RemoteMedia) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @override
   Future<Widget> getPreview() async {
     String imgUrl = await APIServiceClient().getPreview(id);
     return Stack(
