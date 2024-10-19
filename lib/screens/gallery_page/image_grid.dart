@@ -2,12 +2,16 @@ import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:mobile/model/checksum.dart';
 import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/media_asset.dart';
+import 'package:mobile/model/media_info.dart';
 import 'package:mobile/model/remote_media_asset.dart';
 import 'package:mobile/services/database_service.dart';
 import 'package:mobile/services/sync_manager.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:mobile/utils/checksum.dart';
 import 'preview_container.dart';
 
 class ImageGrid extends StatefulWidget {
@@ -45,13 +49,13 @@ class ImageGridState extends State<ImageGrid> {
   @override
   void initState() {
     super.initState();
-    _startLoadingLocalAssets();
     initSyncManager().then((_) {
       _pagingController.addPageRequestListener((pageKey) {
         if (_isAssetsLoaded) {
           _loadAssets(pageKey);
         }
       });
+      _startLoadingLocalAssets();
     });
   }
 
@@ -118,13 +122,17 @@ class ImageGridState extends State<ImageGrid> {
     _receivePort!.listen((message) {
       if (message is List<LocalMedia>) {
         // Update the localAssets with the list received from the isolate
-        localAssets += message;
-        mergeMediaAssets();
-      } else if (message == "done") {
-        print("Local media loading completed.");
+        if (message.isNotEmpty) {
+          localAssets += message;
+          mergeMediaAssets();
+        }
+      } else if (message is int) {
+        //Adicionar a barra de progresso
+        if (message % 100 == 0) {
+          print(message);
+        }
       }
     });
-    _pagingController.refresh();
   }
 
   void _stopLocalMediaIsolate() {
@@ -190,4 +198,58 @@ class ImageGridState extends State<ImageGrid> {
     database.close();
     super.dispose();
   }
+}
+
+// The background isolate function
+void backgroundMediaLoader(List args) async {
+  SendPort sendPort = args[0];
+  RootIsolateToken rootToken = args[1];
+  BackgroundIsolateBinaryMessenger.ensureInitialized(rootToken);
+  DatabaseService database = await DatabaseService.create();
+
+  List<MediaInfo> localMedia = await SyncManager().getAllLocalMedia();
+
+  // List of all the ids
+  List<String> localMediaIds = [];
+  for (var media in localMedia) {
+    localMediaIds.add(media.id);
+  }
+
+  // List of Checksum (id,checksum) that has the already calculated checksums
+  List<Checksum> checksums = await database.getChecksumsFromList(localMediaIds);
+
+  Map<String, String> checksumMap = {
+    for (var r in checksums) r.localId: r.checksum
+  };
+
+  List<MediaInfo> mediaInfoNotCalculated = [];
+  List<LocalMedia> localMediaCalculated = [];
+  for (var media in localMedia) {
+    if (checksumMap[media.id] != null) {
+      localMediaCalculated.add(LocalMedia(
+          null, media.path, media.id, checksumMap[media.id], media.timestamp));
+    } else {
+      mediaInfoNotCalculated.add(media);
+    }
+  }
+
+  print(
+      "Media info already calculated length = ${localMediaCalculated.length}");
+
+  sendPort.send(localMediaCalculated);
+  localMediaCalculated.clear();
+
+  sendPort.send(mediaInfoNotCalculated.length);
+  for (var (ind, asset) in mediaInfoNotCalculated.indexed) {
+    String? checksum =
+        await getOrComputeChecksum(asset.id, asset.path, database);
+    // Create a new LocalMedia item
+    LocalMedia newMedia =
+        LocalMedia(null, asset.path, asset.id, checksum, asset.timestamp);
+
+    localMediaCalculated.add(newMedia);
+    sendPort.send(ind);
+  }
+  sendPort.send(localMediaCalculated);
+  print("Done backgroundMediaLoader");
 }

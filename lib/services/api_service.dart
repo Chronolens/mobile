@@ -188,7 +188,6 @@ class APIServiceClient {
 
     try {
       var response = await http.get(uri, headers: headers);
-      print(response.body);
       return response.body;
     } catch (e) {
       print("Error getting preview for: $uuid");

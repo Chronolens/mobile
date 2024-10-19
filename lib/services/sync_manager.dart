@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:isolate';
 import 'package:flutter/services.dart';
+import 'package:mobile/model/checksum.dart';
 import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/model/media_info.dart';
@@ -108,36 +109,3 @@ class SyncManager {
   }
 }
 
-// The background isolate function
-void backgroundMediaLoader(List args) async {
-  SendPort sendPort = args[0];
-  RootIsolateToken rootToken = args[1];
-  BackgroundIsolateBinaryMessenger.ensureInitialized(rootToken);
-
-  List<MediaInfo> localMedia = await SyncManager().getAllLocalMedia();
-
-  List<LocalMedia> calculatedLocalMedia = [];
-  for (var (ind, asset) in localMedia.indexed) {
-    String checksum =
-        // FIXME: GetOrComputeChecksum (don't forget to maybe make the db global)
-        await computeChecksum(asset.path);
-
-    // Create a new LocalMedia item
-    LocalMedia newMedia =
-        LocalMedia(null, asset.path, asset.id, checksum, asset.timestamp);
-
-    // Add the new media item to the list
-    calculatedLocalMedia.add(newMedia);
-
-    // Send the updated media list back to the main thread
-    if (ind % 100 == 0) {
-      print("Sent 100 more pictures to the frontend");
-      sendPort.send(calculatedLocalMedia);
-      calculatedLocalMedia.clear();
-    }
-  }
-  sendPort.send(calculatedLocalMedia);
-
-  // Once done, send a completion message (if needed)
-  sendPort.send("done");
-}

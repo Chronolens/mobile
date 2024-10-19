@@ -37,6 +37,15 @@ class DatabaseService {
     return null;
   }
 
+  Future<List<Checksum>> getChecksumsFromList(List<String> ids) async {
+    return ids.isEmpty
+        ? []
+        : await database.checksums
+            .filter()
+            .anyOf(ids, (q, String id) => q.localIdEqualTo(id))
+            .findAll();
+  }
+
   Future<void> upsertRemoteAssets(List<RemoteMedia> remoteMedia) async {
     final remoteAssetsDB = remoteMedia
         .map((r) => RemoteAssetDb()
