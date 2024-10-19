@@ -54,7 +54,7 @@ class DatabaseService {
           ..timestamp = r.timestamp)
         .toList();
 
-    print("upsert $remoteAssetsDB");
+    
     await database.writeTxn(() async {
       print(await database.remoteAssetDbs.putAll(remoteAssetsDB));
     });
@@ -62,11 +62,11 @@ class DatabaseService {
 
   Future<void> deleteRemoteAssets(List<String> remoteIds) async {
     if (remoteIds.isEmpty) {
-      print("No remote IDs to delete.");
+      
       return; // Do nothing if the list is empty
     }
 
-    print("delete $remoteIds");
+    
     await database.writeTxn(() async {
       print(await database.remoteAssetDbs
           .filter()
@@ -81,7 +81,7 @@ class DatabaseService {
       remoteMediaList = await database.remoteAssetDbs.where().findAll();
     });
 
-    print("get $remoteMediaList");
+    
     return remoteMediaList
         .map((r) => RemoteMedia(r.remoteId, r.checksum, r.timestamp))
         .toList();

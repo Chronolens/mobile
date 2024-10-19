@@ -31,7 +31,6 @@ class SyncManager {
     } else {
       // DO PARTIAL SYNC
 
-      print("Request media modified since $lastSync");
       List remote = await APIServiceClient().syncPartialRemote(lastSync);
 
       final List<RemoteMedia> uploadedList =
@@ -45,14 +44,14 @@ class SyncManager {
       assets.addAll(await database.getRemoteAssets());
     }
     assets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
+    
     return assets;
   }
 
   Future<List<MediaInfo>> getAllLocalMedia() async {
     try {
       // Call the method on the platform (Android in this case)
-      print("before native");
+      
       final List<dynamic> paths =
           await platform.invokeMethod('getAllImagePathsNative');
 
@@ -62,7 +61,7 @@ class SyncManager {
             (pair as List<dynamic>).map((e) => e.toString()).toList();
         localMediaInfo.insert(0, MediaInfo(s[0], int.parse(s[2]), s[1]));
       }
-      print("before native");
+      
       return localMediaInfo;
     } on PlatformException catch (_) {
       return [];

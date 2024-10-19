@@ -44,7 +44,7 @@ class APIServiceClient {
   //   final SharedPreferences prefs = await SharedPreferences.getInstance();
   //   String baseUrl = prefs.getString(BASE_URL) ?? "";
   //   var uri = Uri.parse('$baseUrl/image/upload');
-  //   print('$baseUrl/image/upload');
+  //
 
   //   final fileStream = File(path).openRead();
   //   final checksum = (await sha256.bind(fileStream).first).toString();
@@ -66,9 +66,9 @@ class APIServiceClient {
 
   //   var response = await request.send();
   //   if (response.statusCode == 200)
-  //     print('Uploaded!');
+  //
   //   else
-  //     print(response);
+  //
   // }
 
   // TODO: change funtion inputs
@@ -82,10 +82,6 @@ class APIServiceClient {
     final file = File(filePath);
     final checksum = await computeChecksum(filePath);
     final mimeType = lookupMimeType(filePath) ?? "application/octet-stream";
-
-    print("MimeType: $mimeType");
-    print("CheckSum: $checksum");
-    print("FilePath: $filePath");
 
     final int fileTimeStamp = await getFileStamp(file);
 
@@ -101,7 +97,7 @@ class APIServiceClient {
 
     streamedRequest.contentLength = await file.length();
     file.openRead().listen((chunk) {
-      //print("chunk: ${chunk.length}");
+      //
       streamedRequest.sink.add(chunk);
     }, onDone: () {
       streamedRequest.sink.close();
@@ -113,9 +109,8 @@ class APIServiceClient {
           'Response: ${response.statusCode} ${response.reasonPhrase} ${await response.stream.bytesToString()}');
     } on http.ClientException catch (e) {
       // Probably already exists on server
-      print("Client Exception: ${e.message}");
     } catch (e) {
-      print("Other exception");
+      print("Exception on Upload $e");
     }
   }
 
@@ -132,7 +127,7 @@ class APIServiceClient {
 
     try {
       var response = await http.get(uri, headers: headers);
-      print("Body: ${response.body}");
+
       final List<dynamic> sync = jsonDecode(response.body);
       final List<RemoteMedia> mediaMap =
           sync.map((v) => RemoteMedia.fromJson(v)).toList();
@@ -143,7 +138,6 @@ class APIServiceClient {
       await prefs.setInt(LAST_SYNC, since);
       return mediaMap;
     } catch (e) {
-      print("Exception $e");
       return [];
     }
   }
@@ -162,7 +156,7 @@ class APIServiceClient {
 
     try {
       var response = await http.get(uri, headers: headers);
-      print("Body: ${response.body}");
+
       final Map<String, dynamic> sync = jsonDecode(response.body);
 
       int since = int.parse(response.headers['since']!);
@@ -170,7 +164,6 @@ class APIServiceClient {
 
       return [sync["uploaded"], sync["deleted"]];
     } catch (e) {
-      print("Exception $e");
       return [];
     }
   }
@@ -190,7 +183,6 @@ class APIServiceClient {
       var response = await http.get(uri, headers: headers);
       return response.body;
     } catch (e) {
-      print("Error getting preview for: $uuid");
       return "";
     }
   }

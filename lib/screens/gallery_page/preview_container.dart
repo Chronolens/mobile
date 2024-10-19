@@ -24,7 +24,7 @@ class PreviewContainerState extends State<PreviewContainer> {
           APIServiceClient()
               .uploadFileStream((widget.asset as LocalMedia).path);
         } else {
-          print("This is remote: ${widget.asset.checksum}");
+          
         }
       },
       child: widget.thumbnail,

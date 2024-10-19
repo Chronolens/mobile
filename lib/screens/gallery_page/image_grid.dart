@@ -127,12 +127,13 @@ class ImageGridState extends State<ImageGrid> {
           mergeMediaAssets();
         }
       } else if (message is int) {
-        //Adicionar a barra de progresso
-        if (message % 100 == 0) {
-          print(message);
-        }
+        // TODO: Adicionar a barra de progresso
+        if (message % 100 == 0) {}
       }
     });
+    for (var ass in allAssets) {
+      print("Asset: ${ass.checksum} - ${ass.timestamp}");
+    }
   }
 
   void _stopLocalMediaIsolate() {
@@ -251,5 +252,4 @@ void backgroundMediaLoader(List args) async {
     sendPort.send(ind);
   }
   sendPort.send(localMediaCalculated);
-  print("Done backgroundMediaLoader");
 }
