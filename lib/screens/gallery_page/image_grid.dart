@@ -32,8 +32,6 @@ class ImageGridState extends State<ImageGrid> {
   List<RemoteMedia> remoteAssets = [];
   List<LocalMedia> localAssets = [];
 
-  bool _isAssetsLoaded = false; // Add this flag
-
   Isolate? _localMediaIsolate;
   ReceivePort? _receivePort;
 
@@ -41,9 +39,6 @@ class ImageGridState extends State<ImageGrid> {
     database = await DatabaseService.create();
     remoteAssets = await SyncManager().getAssetStructure(database);
     mergeMediaAssets();
-    setState(() {
-      _isAssetsLoaded = true; // Update the flag after paths are loaded
-    });
   }
 
   @override
@@ -51,7 +46,7 @@ class ImageGridState extends State<ImageGrid> {
     super.initState();
     initSyncManager().then((_) {
       _pagingController.addPageRequestListener((pageKey) {
-        if (_isAssetsLoaded) {
+        if (allAssets.isNotEmpty) {
           _loadAssets(pageKey);
         }
       });
@@ -60,7 +55,9 @@ class ImageGridState extends State<ImageGrid> {
   }
 
   void mergeMediaAssets() {
-    allAssets = SyncManager().mergeAssets(localAssets, remoteAssets);
+    setState(() {
+      allAssets = SyncManager().mergeAssets(localAssets, remoteAssets);
+    });
     _pagingController.refresh();
   }
 
@@ -148,48 +145,50 @@ class ImageGridState extends State<ImageGrid> {
   @override
   Widget build(BuildContext context) {
     // Show a loading indicator until paths are loaded
-    return _isAssetsLoaded // Only display grid if assets are loaded
-        ? RefreshIndicator(
+    return // Only display grid if assets are loaded
+        RefreshIndicator(
             onRefresh: _refreshList,
-            child: PagedGridView<int, MediaAsset>(
-              pagingController: _pagingController,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 2.0,
-                mainAxisSpacing: 2.0,
-              ),
-              builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
-                itemBuilder: (context, asset, index) {
-                  return FutureBuilder<Widget?>(
-                    future: _getThumbnail(asset),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return PreviewContainer(
-                          asset: asset,
-                          thumbnail: snapshot.data,
+            child: allAssets.isNotEmpty
+                ? PagedGridView<int, MediaAsset>(
+                    pagingController: _pagingController,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 2.0,
+                      mainAxisSpacing: 2.0,
+                    ),
+                    builderDelegate: PagedChildBuilderDelegate<MediaAsset>(
+                      itemBuilder: (context, asset, index) {
+                        return FutureBuilder<Widget?>(
+                          future: _getThumbnail(asset),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return PreviewContainer(
+                                asset: asset,
+                                thumbnail: snapshot.data,
+                              );
+                            } else {
+                              return Container(
+                                color: Colors.grey[300],
+                              );
+                            }
+                          },
                         );
-                      } else {
-                        return Container(
-                          color: Colors.grey[300],
-                        );
-                      }
-                    },
-                  );
-                },
-                firstPageErrorIndicatorBuilder: (context) => Center(
-                  child: Text('Failed to load images'),
-                ),
-                newPageErrorIndicatorBuilder: (context) => Center(
-                  child: Text('Failed to load more images'),
-                ),
-                noItemsFoundIndicatorBuilder: (context) => Center(
-                  child: Text('No images found'),
-                ),
-              ),
-            ))
-        : Center(
-            child:
-                CircularProgressIndicator()); // Loading indicator before assets are loaded
+                      },
+                      firstPageErrorIndicatorBuilder: (context) => Center(
+                        child: Text('Failed to load images'),
+                      ),
+                      newPageErrorIndicatorBuilder: (context) => Center(
+                        child: Text('Failed to load more images'),
+                      ),
+                      noItemsFoundIndicatorBuilder: (context) => Center(
+                        child: Text('No images found'),
+                      ),
+                    ),
+                  )
+                : Center(
+                    child:
+                        CircularProgressIndicator())); // Loading indicator before assets are loaded
   }
 
   @override
