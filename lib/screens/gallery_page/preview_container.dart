@@ -24,20 +24,10 @@ class PreviewContainerState extends State<PreviewContainer> {
           APIServiceClient()
               .uploadFileStream((widget.asset as LocalMedia).path);
         } else {
-          print("This is remote: ${widget.asset.checksum}");
+          
         }
       },
       child: widget.thumbnail,
     );
   }
 }
-                //if (_isUploaded) // Widget for the icon, still need to change all icons to the icon pack in the design
-                //  Positioned(
-                //    top: 8.0,  
-                //    right: 8.0, 
-                //    child: Icon(
-                //      Icons.cloud_done, 
-                //      size: 24.0,       
-                //      color: Colors.purple.shade400, 
-                //    ),
-                //  ),

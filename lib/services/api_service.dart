@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:mobile/model/login_request.dart';
 import 'package:mobile/model/login_response.dart';
 import 'package:mobile/model/remote_media_asset.dart';
+import 'package:mobile/utils/checksum.dart';
 import 'package:mobile/utils/constants.dart';
 import 'package:mobile/utils/time.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,7 +44,7 @@ class APIServiceClient {
   //   final SharedPreferences prefs = await SharedPreferences.getInstance();
   //   String baseUrl = prefs.getString(BASE_URL) ?? "";
   //   var uri = Uri.parse('$baseUrl/image/upload');
-  //   print('$baseUrl/image/upload');
+  //
 
   //   final fileStream = File(path).openRead();
   //   final checksum = (await sha256.bind(fileStream).first).toString();
@@ -66,11 +66,12 @@ class APIServiceClient {
 
   //   var response = await request.send();
   //   if (response.statusCode == 200)
-  //     print('Uploaded!');
+  //
   //   else
-  //     print(response);
+  //
   // }
 
+  // TODO: change funtion inputs
   Future<void> uploadFileStream(String filePath) async {
     final SharedPreferencesAsync prefs = SharedPreferencesAsync();
     String baseUrl = await prefs.getString(BASE_URL) ?? "";
@@ -79,13 +80,8 @@ class APIServiceClient {
     final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
 
     final file = File(filePath);
-    final fileStream = file.openRead();
-    final checksum = base64.encode((await sha256.bind(fileStream).first).bytes);
+    final checksum = await computeChecksum(filePath);
     final mimeType = lookupMimeType(filePath) ?? "application/octet-stream";
-
-    print("MimeType: $mimeType");
-    print("CheckSum: $checksum");
-    print("FilePath: $filePath");
 
     final int fileTimeStamp = await getFileStamp(file);
 
@@ -95,13 +91,13 @@ class APIServiceClient {
         HttpHeaders.authorizationHeader: "Bearer $jwtToken",
         HttpHeaders.contentTypeHeader: mimeType,
         "Timestamp": fileTimeStamp.toString(),
-        'Content-Digest': "sha-256=:$checksum:",
+        'Content-Digest': "sha-1=:$checksum:",
         'Expect': '100-continue'
       });
 
     streamedRequest.contentLength = await file.length();
     file.openRead().listen((chunk) {
-      //print("chunk: ${chunk.length}");
+      //
       streamedRequest.sink.add(chunk);
     }, onDone: () {
       streamedRequest.sink.close();
@@ -113,13 +109,12 @@ class APIServiceClient {
           'Response: ${response.statusCode} ${response.reasonPhrase} ${await response.stream.bytesToString()}');
     } on http.ClientException catch (e) {
       // Probably already exists on server
-      print("Client Exception: ${e.message}");
     } catch (e) {
-      print("Other exception");
+      print("Exception on Upload $e");
     }
   }
 
-  Future<Map<String, RemoteMedia>> syncFullRemote() async {
+  Future<List<RemoteMedia>> syncFullRemote() async {
     final SharedPreferencesAsync prefs = SharedPreferencesAsync();
     String baseUrl = await prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/sync/full');
@@ -132,21 +127,18 @@ class APIServiceClient {
 
     try {
       var response = await http.get(uri, headers: headers);
-      print("Body: ${response.body}");
-      final Map<String, dynamic> sync = jsonDecode(response.body);
 
-      final Map<String, RemoteMedia> mediaMap =
-          sync.map<String, RemoteMedia>((key, value) {
-        //Map of Id -> (hash,created_at)
-        return MapEntry(key, RemoteMedia.fromJson(value, key));
-      });
-      print("Sync $mediaMap");
+      final List<dynamic> sync = jsonDecode(response.body);
+      final List<RemoteMedia> mediaMap =
+          sync.map((v) => RemoteMedia.fromJson(v)).toList();
+
       print("Finished syncFull()");
 
+      int since = int.parse(response.headers['since']!);
+      await prefs.setInt(LAST_SYNC, since);
       return mediaMap;
     } catch (e) {
-      print("Exception $e");
-      return <String, RemoteMedia>{};
+      return [];
     }
   }
 
@@ -164,12 +156,14 @@ class APIServiceClient {
 
     try {
       var response = await http.get(uri, headers: headers);
-      print("Body: ${response.body}");
+
       final Map<String, dynamic> sync = jsonDecode(response.body);
+
+      int since = int.parse(response.headers['since']!);
+      await prefs.setInt(LAST_SYNC, since);
 
       return [sync["uploaded"], sync["deleted"]];
     } catch (e) {
-      print("Exception $e");
       return [];
     }
   }
@@ -187,10 +181,8 @@ class APIServiceClient {
 
     try {
       var response = await http.get(uri, headers: headers);
-      print(response.body);
       return response.body;
     } catch (e) {
-      print("Error getting preview for: $uuid");
       return "";
     }
   }
