@@ -13,7 +13,7 @@ class GalleryPage extends StatefulWidget {
 }
 
 class GalleryPageState extends State<GalleryPage> {
-  bool _permissionState = false; 
+  bool _permissionState = false;
 
   @override
   void initState() {
@@ -38,7 +38,24 @@ class GalleryPageState extends State<GalleryPage> {
           _permissionState = statusStorage.isGranted;
         });
       }
+    } else if (Platform.isIOS) {
+      Map<Permission, PermissionStatus> status =
+          await [Permission.storage, Permission.photos].request();
+
+      PermissionStatus? statusStorage = status[Permission.storage];
+      PermissionStatus? statusPhotos = status[Permission.photos];
+
+      print("Permission: storage $statusStorage, photos $statusPhotos");
+
+      setState(() {
+        _permissionState = statusStorage == PermissionStatus.granted &&
+            statusPhotos == PermissionStatus.granted;
+      });
+      //bool isPermanentlyDenied =
+      //        statusStorage == PermissionStatus.permanentlyDenied ||
+      //        statusPhotos == PermissionStatus.permanentlyDenied;
     }
+
     // #TODO: Handle iOS permissions
   }
 
@@ -51,16 +68,8 @@ class GalleryPageState extends State<GalleryPage> {
           style: TextStyle(fontSize: 18, color: Colors.red),
         ),
       );
-    }
-
-    else {
-      return const  ImageGrid();
+    } else {
+      return const ImageGrid();
     }
   }
 }
-
-
-
-
-
-

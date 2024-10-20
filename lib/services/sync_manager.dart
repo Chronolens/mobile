@@ -10,6 +10,7 @@ import 'package:mobile/services/api_service.dart';
 import 'package:mobile/services/database_service.dart';
 import 'package:mobile/utils/checksum.dart';
 import 'package:mobile/utils/constants.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SyncManager {
@@ -44,24 +45,51 @@ class SyncManager {
       assets.addAll(await database.getRemoteAssets());
     }
     assets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    
+
     return assets;
   }
 
   Future<List<MediaInfo>> getAllLocalMedia() async {
     try {
       // Call the method on the platform (Android in this case)
-      
-      final List<dynamic> paths =
-          await platform.invokeMethod('getAllImagePathsNative');
 
+      //final List<dynamic> paths =
+      //    await platform.invokeMethod('getAllImagePathsNative');
+
+      List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+        type: RequestType.image,
+      );
       List<MediaInfo> localMediaInfo = [];
-      for (var pair in paths) {
-        List<String> s =
-            (pair as List<dynamic>).map((e) => e.toString()).toList();
-        localMediaInfo.insert(0, MediaInfo(s[0], int.parse(s[2]), s[1]));
+
+      for (final album in albums) {
+        List<AssetEntity> media =
+            await album.getAssetListRange(start: 0, end: 100);
+
+        //for (final asset in media) {
+        //  final file = await asset.file;
+        //  if (file != null) {
+        //    final id = asset.id;
+        //    final createDateTime = asset.createDateTime.millisecondsSinceEpoch;
+        //    final modifiedDateTime =
+        //        asset.modifiedDateTime.millisecondsSinceEpoch;
+        //
+        //    // TODO: This could be better, maybe append and then reverse?
+        //
+        //    localMediaInfo.insert(
+        //        0,
+        //        MediaInfo(
+        //            file.path,
+        //            createDateTime == 0 ? modifiedDateTime : createDateTime,
+        //            id));
+        //  }
+        }
       }
-      
+
+      //for (var pair in paths) {
+      //  List<String> s =
+      //      (pair as List<dynamic>).map((e) => e.toString()).toList();
+      //  localMediaInfo.insert(0, MediaInfo(s[0], int.parse(s[2]), s[1]));
+      //}
       return localMediaInfo;
     } on PlatformException catch (_) {
       return [];
@@ -107,4 +135,3 @@ class SyncManager {
     return mediaAssets;
   }
 }
-
