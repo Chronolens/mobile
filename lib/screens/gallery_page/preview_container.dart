@@ -18,13 +18,13 @@ class PreviewContainerState extends State<PreviewContainer> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        if (widget.asset is LocalMedia &&
-            ((widget.asset as LocalMedia).remoteId == null)) {
-          print('File tapped: ${(widget.asset as LocalMedia).path}');
-          APIServiceClient()
-              .uploadFileStream((widget.asset as LocalMedia).path);
-        } else {
-          
+        var asset = widget.asset;
+        if (asset is LocalMedia) {
+          if (asset.remoteId == null) {
+            print('File tapped: ${(widget.asset as LocalMedia).path}');
+            APIServiceClient()
+                .uploadFileStream(asset);
+          }
         }
       },
       child: widget.thumbnail,

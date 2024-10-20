@@ -4,12 +4,15 @@ import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
+import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/login_request.dart';
 import 'package:mobile/model/login_response.dart';
+import 'package:mobile/model/media_asset.dart';
 import 'package:mobile/model/remote_media_asset.dart';
 import 'package:mobile/utils/checksum.dart';
 import 'package:mobile/utils/constants.dart';
 import 'package:mobile/utils/time.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class APIServiceClient {
@@ -72,31 +75,41 @@ class APIServiceClient {
   // }
 
   // TODO: change funtion inputs
-  Future<void> uploadFileStream(String filePath) async {
+  Future<void> uploadFileStream(LocalMedia asset) async {
     final SharedPreferencesAsync prefs = SharedPreferencesAsync();
     String baseUrl = await prefs.getString(BASE_URL) ?? "";
     var uri = Uri.parse('$baseUrl/image/upload');
     final storage = FlutterSecureStorage();
     final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
 
-    final file = File(filePath);
-    final checksum = await computeChecksum(filePath);
-    final mimeType = lookupMimeType(filePath) ?? "application/octet-stream";
+    final mimeType = (await asset.asset?.mimeTypeAsync) ?? "application/octet-stream";
 
-    final int fileTimeStamp = await getFileStamp(file);
+    File? file;
+    if (Platform.isIOS) {
+      file = await (await AssetEntity.fromId(asset.id))?.originFile;
+    } else {
+      file = File(asset.path);
+    }
+
+    String checksum;
+    if (Platform.isIOS) {
+      checksum = await computeChecksumIOS(asset.id);
+    } else {
+      checksum = await computeChecksumAndroid(asset.path);
+    }
 
     final streamedRequest = http.StreamedRequest('POST', uri)
       ..headers.addAll({
         HttpHeaders.cacheControlHeader: 'no-cache',
         HttpHeaders.authorizationHeader: "Bearer $jwtToken",
         HttpHeaders.contentTypeHeader: mimeType,
-        "Timestamp": fileTimeStamp.toString(),
+        "Timestamp": asset.timestamp.toString(),
         'Content-Digest': "sha-1=:$checksum:",
         'Expect': '100-continue'
       });
 
-    streamedRequest.contentLength = await file.length();
-    file.openRead().listen((chunk) {
+    streamedRequest.contentLength = await file?.length();
+    file?.openRead().listen((chunk) {
       //
       streamedRequest.sink.add(chunk);
     }, onDone: () {

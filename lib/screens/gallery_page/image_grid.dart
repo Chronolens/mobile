@@ -95,7 +95,6 @@ class ImageGridState extends State<ImageGrid> {
   }
 
   Future<void> _refreshList() async {
-    _assetCache.clear();
     remoteAssets = await SyncManager().getAssetStructure(database);
     _startLoadingLocalAssets();
   }
