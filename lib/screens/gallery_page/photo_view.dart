@@ -6,6 +6,8 @@ import 'package:mobile/model/remote_media_asset.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:mobile/services/api_service.dart';
 
+// TODO: Possibly transform into stateful so we can update the UI when the asset is uploaded to the cloud
+// but it might not be necessary since the user can just go back and re-enter the fullscreen view
 class FullscreenPhotoView extends StatelessWidget {
   final MediaAsset asset;
 
@@ -57,7 +59,7 @@ class FullscreenPhotoView extends StatelessWidget {
             ),
           ),
 
-          // Bottom Buttons for now from left to right Metadata, share, cloud(upload or remove toggle) and delete
+          // Bottom Buttons for now from left to right Metadata, share, cloud (upload/remove toggle), and delete/transfer
           Positioned(
             bottom: 40,
             left: 20,
@@ -77,24 +79,79 @@ class FullscreenPhotoView extends StatelessWidget {
                     print("Share button pressed");
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
-                  onPressed: () {
-                    print("Cloud button pressed");
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.white),
-                  onPressed: () {
-                    print("Delete button pressed");
-                  },
-                ),
+
+                _buildCloudIcon(asset),
+
+                _buildDeleteOrTransferIcon(asset),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+
+  // If asset is local, either upload to cloud or show cloud icon if already in cloud
+  // For remote asset, show cloud icon to remove from cloud TODO: Implement remove from cloud
+  Widget _buildCloudIcon(MediaAsset asset) {
+
+    if (asset is LocalMedia) {
+      if (asset.remoteId != null) {
+        return IconButton(
+          icon: const Icon(Icons.cloud_done, color: Colors.lightBlueAccent),
+          onPressed: () {
+            print("Already in cloud: ${asset.remoteId}");
+          },
+        );
+      } else {
+        return IconButton(
+          icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
+          onPressed: () async {
+            print("Uploading local asset: ${asset.path}");
+            await APIServiceClient().uploadFileStream(asset.path);
+          },
+        );
+      }
+
+    }
+    else if (asset is RemoteMedia) {
+      return IconButton(
+        icon: const Icon(Icons.cloud, color: Colors.lightBlueAccent),
+        onPressed: () {
+          print("Remove from cloud not implemented yet");
+        },
+      );
+    }
+
+    return Container(); 
+  }
+
+
+  // If asset is local show delete icon, if remote show download icon
+  // TODO: Implement delete and download
+  Widget _buildDeleteOrTransferIcon(MediaAsset asset) {
+
+    if (asset is RemoteMedia) {
+      return IconButton(
+        icon: const Icon(Icons.download, color: Colors.white),
+        onPressed: () {
+          print("Downloading not implemented yet");
+        },
+      );
+    } 
+
+    else if (asset is LocalMedia) {
+      return IconButton(
+        icon: const Icon(Icons.delete, color: Colors.white),
+        onPressed: () {
+          print("Deleting not implemented yet");
+        },
+      );
+    }
+    else {
+      return Container(); 
+    }
   }
 
   Future<Widget> _loadFullImage(MediaAsset asset) async {
