@@ -6,12 +6,17 @@ import 'package:mobile/model/remote_media_asset.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:mobile/services/api_service.dart';
 
-// TODO: Possibly transform into stateful so we can update the UI when the asset is uploaded to the cloud
-// but it might not be necessary since the user can just go back and re-enter the fullscreen view
-class FullscreenPhotoView extends StatelessWidget {
+class FullscreenPhotoView extends StatefulWidget {
   final MediaAsset asset;
 
   const FullscreenPhotoView({super.key, required this.asset});
+
+  @override
+  _FullscreenPhotoViewState createState() => _FullscreenPhotoViewState();
+}
+
+class _FullscreenPhotoViewState extends State<FullscreenPhotoView> {
+  bool _isUploaded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +27,7 @@ class FullscreenPhotoView extends StatelessWidget {
 
           Center(
             child: FutureBuilder<Widget>(
-              future: _loadFullImage(asset),
+              future: _loadFullImage(widget.asset),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -80,9 +85,9 @@ class FullscreenPhotoView extends StatelessWidget {
                   },
                 ),
 
-                _buildCloudIcon(asset),
+                _buildCloudIcon(widget.asset),
 
-                _buildDeleteOrTransferIcon(asset),
+                _buildDeleteOrTransferIcon(widget.asset),
               ],
             ),
           ),
@@ -91,13 +96,11 @@ class FullscreenPhotoView extends StatelessWidget {
     );
   }
 
-
   // If asset is local, either upload to cloud or show cloud icon if already in cloud
   // For remote asset, show cloud icon to remove from cloud TODO: Implement remove from cloud
   Widget _buildCloudIcon(MediaAsset asset) {
-
     if (asset is LocalMedia) {
-      if (asset.remoteId != null) {
+      if (asset.remoteId != null || _isUploaded) {
         return IconButton(
           icon: const Icon(Icons.cloud_done, color: Colors.lightBlueAccent),
           onPressed: () {
@@ -109,13 +112,16 @@ class FullscreenPhotoView extends StatelessWidget {
           icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
           onPressed: () async {
             print("Uploading local asset: ${asset.path}");
-            await APIServiceClient().uploadFileStream(asset.path);
+            bool success = await _uploadToCloud(asset.path);
+            if (success) {
+              setState(() {
+                _isUploaded = true;
+              });
+            }
           },
         );
       }
-
-    }
-    else if (asset is RemoteMedia) {
+    } else if (asset is RemoteMedia) {
       return IconButton(
         icon: const Icon(Icons.cloud, color: Colors.lightBlueAccent),
         onPressed: () {
@@ -124,14 +130,23 @@ class FullscreenPhotoView extends StatelessWidget {
       );
     }
 
-    return Container(); 
+    return Container();
   }
 
+
+  Future<bool> _uploadToCloud(String path) async {
+    try {
+      await APIServiceClient().uploadFileStream(path);
+      return true;
+    } catch (e) {
+      print("Upload failed: $e");
+      return false;
+    }
+  }
 
   // If asset is local show delete icon, if remote show download icon
   // TODO: Implement delete and download
   Widget _buildDeleteOrTransferIcon(MediaAsset asset) {
-
     if (asset is RemoteMedia) {
       return IconButton(
         icon: const Icon(Icons.download, color: Colors.white),
@@ -139,18 +154,15 @@ class FullscreenPhotoView extends StatelessWidget {
           print("Downloading not implemented yet");
         },
       );
-    } 
-
-    else if (asset is LocalMedia) {
+    } else if (asset is LocalMedia) {
       return IconButton(
         icon: const Icon(Icons.delete, color: Colors.white),
         onPressed: () {
           print("Deleting not implemented yet");
         },
       );
-    }
-    else {
-      return Container(); 
+    } else {
+      return Container();
     }
   }
 
@@ -173,12 +185,10 @@ class FullscreenPhotoView extends StatelessWidget {
     return PhotoView(
       imageProvider: imageProvider,
       backgroundDecoration: const BoxDecoration(color: Colors.black),
-      
+
       // Preventing infinite zoomout and limiting zoom in to 3x (completely arbitrary)
       minScale: PhotoViewComputedScale.contained,
       maxScale: PhotoViewComputedScale.covered * 3,
     );
   }
-
-
 }
