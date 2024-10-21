@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/model/local_media_asset.dart';
 import 'package:mobile/model/media_asset.dart';
-import 'package:mobile/services/api_service.dart';
+import 'package:mobile/screens/gallery_page/photo_view.dart'; // Import the new screen
 
 class PreviewContainer extends StatefulWidget {
   final MediaAsset asset;
@@ -18,14 +17,12 @@ class PreviewContainerState extends State<PreviewContainer> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        if (widget.asset is LocalMedia &&
-            ((widget.asset as LocalMedia).remoteId == null)) {
-          print('File tapped: ${(widget.asset as LocalMedia).path}');
-          APIServiceClient()
-              .uploadFileStream((widget.asset as LocalMedia).path);
-        } else {
-          
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FullscreenPhotoView(asset: widget.asset),
+          ),
+        );
       },
       child: widget.thumbnail,
     );
