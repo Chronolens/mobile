@@ -186,4 +186,26 @@ class APIServiceClient {
       return "";
     }
   }
+
+
+  Future<String> getFullImage(String uuid) async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
+    var uri = Uri.parse('$baseUrl/media/$uuid');
+    final storage = FlutterSecureStorage();
+    final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+
+    Map<String, String> headers = {
+      HttpHeaders.authorizationHeader: "Bearer $jwtToken"
+    };
+
+    try {
+      var response = await http.get(uri, headers: headers);
+      return response.body;
+    } catch (e) {
+      return "";
+    }
+  }
+
+
 }
