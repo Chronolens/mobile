@@ -156,31 +156,29 @@ class FullscreenPhotoView extends StatelessWidget {
 
   Future<Widget> _loadFullImage(MediaAsset asset) async {
     if (asset is LocalMedia) {
-      return _getLocalFullImage(asset);
+      final assetEntity = await AssetEntity.fromId(asset.id);
+      final file = await assetEntity?.file;
+      if (file != null) {
+        return _buildPhotoView(imageProvider: FileImage(file));
+      }
+      return const Center(child: Text('Could not load image'));
     } else if (asset is RemoteMedia) {
-      return _getRemotePreviewImage(asset);
+      String imgUrl = await APIServiceClient().getFullImage(asset.id);
+      return _buildPhotoView(imageProvider: NetworkImage(imgUrl));
     }
     return const Center(child: Text('Unsupported media type'));
   }
 
-  Future<Widget> _getLocalFullImage(LocalMedia asset) async {
-    final assetEntity = await AssetEntity.fromId(asset.id);
-    final file = await assetEntity?.file;
-
-    if (file != null) {
-      return PhotoView(
-        imageProvider: FileImage(file),
-        backgroundDecoration: const BoxDecoration(color: Colors.black),
-      );
-    }
-    return const Center(child: Text('Could not load image'));
-  }
-
-  Future<Widget> _getRemotePreviewImage(RemoteMedia asset) async {
-    String imgUrl = await APIServiceClient().getFullImage(asset.id);
+  Widget _buildPhotoView({required ImageProvider imageProvider}) {
     return PhotoView(
-      imageProvider: NetworkImage(imgUrl),
+      imageProvider: imageProvider,
       backgroundDecoration: const BoxDecoration(color: Colors.black),
+      
+      // Preventing infinite zoomout and limiting zoom in to 3x (completely arbitrary)
+      minScale: PhotoViewComputedScale.contained,
+      maxScale: PhotoViewComputedScale.covered * 3,
     );
   }
+
+
 }
