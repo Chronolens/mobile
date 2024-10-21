@@ -112,7 +112,7 @@ class _FullscreenPhotoViewState extends State<FullscreenPhotoView> {
           icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
           onPressed: () async {
             print("Uploading local asset: ${asset.path}");
-            bool success = await _uploadToCloud(asset.path);
+            bool success = await _uploadToCloud(asset);
             if (success) {
               setState(() {
                 _isUploaded = true;
@@ -134,9 +134,9 @@ class _FullscreenPhotoViewState extends State<FullscreenPhotoView> {
   }
 
 
-  Future<bool> _uploadToCloud(String path) async {
+  Future<bool> _uploadToCloud(LocalMedia asset) async {
     try {
-      await APIServiceClient().uploadFileStream(path);
+      await APIServiceClient().uploadFileStream(asset);
       return true;
     } catch (e) {
       print("Upload failed: $e");
