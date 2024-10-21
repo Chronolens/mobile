@@ -40,7 +40,6 @@ class LocalMedia extends MediaAsset {
                       image: Image.memory(thumbnail).image,
                       fit: BoxFit.cover,
                     ),
-                    borderRadius: BorderRadius.circular(8.0),
                   ),
                 ),
                 if (remoteId !=
@@ -50,8 +49,8 @@ class LocalMedia extends MediaAsset {
                     right: 8.0,
                     child: Icon(
                       Icons.cloud_done,
-                      size: 24.0,
-                      color: Colors.purple.shade400,
+                      size: 16.0,
+                      color: Colors.purpleAccent.shade400,
                     ),
                   ),
               ],

@@ -35,7 +35,6 @@ class RemoteMedia extends MediaAsset {
               image: Image.network(imgUrl).image,
               fit: BoxFit.cover,
             ),
-            borderRadius: BorderRadius.circular(8.0),
           ),
         ),
         Positioned(
