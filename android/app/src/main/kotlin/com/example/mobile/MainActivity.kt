@@ -60,7 +60,7 @@ class MainActivity : FlutterActivity() {
                 val dateTaken = if (dateTakenColumnIndex != -1) it.getLong(dateTakenColumnIndex) else null // Get the DATE_TAKEN value, can be null
 
                 // Check if dateTaken is null, if so, fallback to DATE_MODIFIED or file metadata
-                val finalTimestamp = dateTaken ?: getFallbackTimestamp(imagePath, it.getLong(dateModifiedColumnIndex))
+                val finalTimestamp = dateTaken ?: it.getLong(dateModifiedColumnIndex)
 
                 // Add MediaStore ID, file path, and timestamp to the list
                 imagePaths.add(listOf(imagePath, imageId, finalTimestamp.toString()))
@@ -70,15 +70,4 @@ class MainActivity : FlutterActivity() {
         return imagePaths
     }
 
-    // Function to get fallback timestamp using file metadata
-    private fun getFallbackTimestamp(filePath: String, dateModified: Long): Long {
-        val file = File(filePath)
-        
-        return if (file.exists()) {
-            val fileModifiedTime = file.lastModified() // Fallback to the file's last modified time
-            fileModifiedTime.takeIf { it > 0 } ?: dateModified // If valid, use the lastModified time, else fallback to MediaStore's DATE_MODIFIED
-        } else {
-            dateModified // Fallback to MediaStore's DATE_MODIFIED column
-        }
-    }
 }

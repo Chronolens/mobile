@@ -16,9 +16,6 @@ jobs:
           channel: 'stable'
           architecture: x64
 
-      - run: flutter channel master
-      - run: flutter upgrade
-
       - name: Install dependencies
         run: dart pub get
 

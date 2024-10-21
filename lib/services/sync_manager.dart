@@ -44,24 +44,25 @@ class SyncManager {
       assets.addAll(await database.getRemoteAssets());
     }
     assets.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    
+
     return assets;
   }
 
   Future<List<MediaInfo>> getAllLocalMedia() async {
     try {
       // Call the method on the platform (Android in this case)
-      
-      final List<dynamic> paths =
+
+      final List<dynamic> assets =
           await platform.invokeMethod('getAllImagePathsNative');
 
       List<MediaInfo> localMediaInfo = [];
-      for (var pair in paths) {
+      for (var pair in assets) {
         List<String> s =
             (pair as List<dynamic>).map((e) => e.toString()).toList();
-        localMediaInfo.insert(0, MediaInfo(s[0], int.parse(s[2]), s[1]));
+        localMediaInfo.add(MediaInfo(s[0], int.parse(s[2]), s[1]));
       }
-      
+      localMediaInfo.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
       return localMediaInfo;
     } on PlatformException catch (_) {
       return [];
