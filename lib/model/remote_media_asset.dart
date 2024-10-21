@@ -42,8 +42,8 @@ class RemoteMedia extends MediaAsset {
           right: 8.0,
           child: Icon(
             Icons.cloud,
-            size: 24.0,
-            color: Colors.purple.shade400,
+            size: 16.0,
+            color: Colors.lightBlueAccent,
           ),
         ),
       ],

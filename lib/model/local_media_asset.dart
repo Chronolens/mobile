@@ -50,7 +50,7 @@ class LocalMedia extends MediaAsset {
                     child: Icon(
                       Icons.cloud_done,
                       size: 16.0,
-                      color: Colors.purpleAccent.shade400,
+                      color: Colors.lightBlueAccent,
                     ),
                   ),
               ],
