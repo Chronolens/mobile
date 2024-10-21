@@ -1,0 +1,224 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:mime/mime.dart';
+import 'package:mobile/model/local_media_asset.dart';
+import 'package:mobile/model/login_request.dart';
+import 'package:mobile/model/login_response.dart';
+import 'package:mobile/model/media_asset.dart';
+import 'package:mobile/model/remote_media_asset.dart';
+import 'package:mobile/utils/checksum.dart';
+import 'package:mobile/utils/constants.dart';
+import 'package:mobile/utils/time.dart';
+import 'package:photo_manager/photo_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class APIServiceClient {
+  Future<int?> login(String username, String password, String baseUrl) async {
+    var uri = Uri.parse('$baseUrl/login');
+    var payload = LoginRequest(username, password).toJson();
+    var body = json.encode(payload);
+    Map<String, String> headers = {
+      HttpHeaders.contentTypeHeader: 'application/json',
+      HttpHeaders.acceptHeader: 'application/json',
+    };
+
+    try {
+      var response = await http.post(uri, body: body, headers: headers);
+
+      if (response.statusCode == 200) {
+        LoginResponse loginResponse =
+            LoginResponse.fromJson(json.decode(response.body));
+        final storage = FlutterSecureStorage();
+        await storage.write(key: JWT_TOKEN, value: loginResponse.token);
+
+        final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+        await prefs.setString(BASE_URL, baseUrl);
+      }
+      return response.statusCode;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // void upload(String path) async {
+  //   final SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   String baseUrl = prefs.getString(BASE_URL) ?? "";
+  //   var uri = Uri.parse('$baseUrl/image/upload');
+  //
+
+  //   final fileStream = File(path).openRead();
+  //   final checksum = (await sha256.bind(fileStream).first).toString();
+
+  //   final storage = FlutterSecureStorage();
+  //   final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+  //     final mimeType = lookupMimeType(path) ?? "application/octet-stream";
+
+  //   var request = http.MultipartRequest('POST', uri)
+  //     ..headers.addAll({
+  //       HttpHeaders.cacheControlHeader: 'no-cache',
+  //       HttpHeaders.authorizationHeader: "Bearer $jwtToken",
+  //       HttpHeaders.contentTypeHeader: mimeType,
+  //       'Content-Digest': "sha-256=:$checksum:",
+  //       'Expect': '100-continue'
+  //     })
+  //     ..files.add(
+  //         await http.MultipartFile.fromPath('image', path, filename: checksum));
+
+  //   var response = await request.send();
+  //   if (response.statusCode == 200)
+  //
+  //   else
+  //
+  // }
+
+  // TODO: change funtion inputs
+  Future<void> uploadFileStream(LocalMedia asset) async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
+    var uri = Uri.parse('$baseUrl/image/upload');
+    final storage = FlutterSecureStorage();
+    final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+
+    final mimeType = (await asset.asset?.mimeTypeAsync) ?? "application/octet-stream";
+
+    File? file;
+    if (Platform.isIOS) {
+      file = await (await AssetEntity.fromId(asset.id))?.originFile;
+    } else {
+      file = File(asset.path);
+    }
+
+    String checksum;
+    if (Platform.isIOS) {
+      checksum = await computeChecksumIOS(asset.id);
+    } else {
+      checksum = await computeChecksumAndroid(asset.path);
+    }
+
+    final streamedRequest = http.StreamedRequest('POST', uri)
+      ..headers.addAll({
+        HttpHeaders.cacheControlHeader: 'no-cache',
+        HttpHeaders.authorizationHeader: "Bearer $jwtToken",
+        HttpHeaders.contentTypeHeader: mimeType,
+        "Timestamp": asset.timestamp.toString(),
+        'Content-Digest': "sha-1=:$checksum:",
+        'Expect': '100-continue'
+      });
+
+    streamedRequest.contentLength = await file?.length();
+    file?.openRead().listen((chunk) {
+      //
+      streamedRequest.sink.add(chunk);
+    }, onDone: () {
+      streamedRequest.sink.close();
+    });
+    try {
+      var response = await streamedRequest.send();
+
+      print(
+          'Response: ${response.statusCode} ${response.reasonPhrase} ${await response.stream.bytesToString()}');
+    } on http.ClientException catch (e) {
+      // Probably already exists on server
+    } catch (e) {
+      print("Exception on Upload $e");
+    }
+  }
+
+  Future<List<RemoteMedia>> syncFullRemote() async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
+    var uri = Uri.parse('$baseUrl/sync/full');
+    final storage = FlutterSecureStorage();
+    final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+
+    Map<String, String> headers = {
+      HttpHeaders.authorizationHeader: "Bearer $jwtToken"
+    };
+
+    try {
+      var response = await http.get(uri, headers: headers);
+
+      final List<dynamic> sync = jsonDecode(response.body);
+      final List<RemoteMedia> mediaMap =
+          sync.map((v) => RemoteMedia.fromJson(v)).toList();
+
+      print("Finished syncFull()");
+
+      int since = int.parse(response.headers['since']!);
+      await prefs.setInt(LAST_SYNC, since);
+      return mediaMap;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List> syncPartialRemote(int lastSync) async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
+    var uri = Uri.parse('$baseUrl/sync/partial');
+    final storage = FlutterSecureStorage();
+    final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+
+    Map<String, String> headers = {
+      HttpHeaders.authorizationHeader: "Bearer $jwtToken",
+      "Since": lastSync.toString()
+    };
+
+    try {
+      var response = await http.get(uri, headers: headers);
+
+      final Map<String, dynamic> sync = jsonDecode(response.body);
+
+      int since = int.parse(response.headers['since']!);
+      await prefs.setInt(LAST_SYNC, since);
+
+      return [sync["uploaded"], sync["deleted"]];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<String> getPreview(String uuid) async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
+    var uri = Uri.parse('$baseUrl/preview/$uuid');
+    final storage = FlutterSecureStorage();
+    final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+
+    Map<String, String> headers = {
+      HttpHeaders.authorizationHeader: "Bearer $jwtToken"
+    };
+
+    try {
+      var response = await http.get(uri, headers: headers);
+      return response.body;
+    } catch (e) {
+      return "";
+    }
+  }
+
+
+  Future<String> getFullImage(String uuid) async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    String baseUrl = await prefs.getString(BASE_URL) ?? "";
+    var uri = Uri.parse('$baseUrl/media/$uuid');
+    final storage = FlutterSecureStorage();
+    final jwtToken = await storage.read(key: JWT_TOKEN) ?? "";
+
+    Map<String, String> headers = {
+      HttpHeaders.authorizationHeader: "Bearer $jwtToken"
+    };
+
+    try {
+      var response = await http.get(uri, headers: headers);
+      return response.body;
+    } catch (e) {
+      return "";
+    }
+  }
+
+
+}

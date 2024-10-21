@@ -1,0 +1,23 @@
+name: Flutter check
+
+on: [pull_request]
+
+jobs:
+  flutter-check:
+    name: flutter-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        name: Check out repository
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Analyze code
+        run: dart analyze --no-fatal-warnings .
